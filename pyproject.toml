@@ -1,0 +1,79 @@
+[tool.poetry]
+name = "dreadnode-cli"
+version = "0.0.1"
+description = "Dreadnode CLI"
+authors = ["Nick Landers <monoxgas@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/dreadnode/cli"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+typer = "^0.12.5"
+pydantic = "^2.9.2"
+jinja2 = "^3.1.4"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.8.0"
+ruff = "^0.1.14"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+dreadnode = 'dreadnode_cli.__main__:run'
+
+[tool.poetry.plugins."pipx.run"]
+dreadnode-cli = 'dreadnode_cli.__main__:run'
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py310"
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "C",     # flake8-comprehensions
+    "B",     # flake8-bugbear
+    "UP",    # pyupgrade
+    "NPY",   # numpydoc
+    "TCH",   # typecheck
+    "A",     # flake8-annotations
+]
+ignore = [
+    "E501",  # line too long, handled by ruff
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+    "F722",  # syntax error in forward annotation
+    "A001",  # shadowing built-in
+    "A002",  # shadowing built-in
+]
+exclude = [
+    ".git",
+    ".git-rewrite",
+    ".mypy_cache",
+    ".ruff_cache",
+    "__pypackages__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+unfixable = ["B"]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
