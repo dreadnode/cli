@@ -1,19 +1,18 @@
-import os
-import pathlib
+import datetime
 
 import pydantic
 import typer
 from rich import print
 
-user_config_path = pathlib.Path(
-    os.getenv("DREADNODE_USER_CONFIG_FILE") or pathlib.Path.home() / ".dreadnode" / "config.json"
-)
+from dreadnode_cli.defaults import USER_CONFIG_PATH
 
 
 class ServerConfig(pydantic.BaseModel):
     url: str
     username: str
     api_key: str
+    created_at: datetime.datetime = datetime.datetime.now()
+    updated_at: datetime.datetime | None = None
 
 
 class UserConfig(pydantic.BaseModel):
@@ -26,20 +25,24 @@ class UserConfig(pydantic.BaseModel):
 
     @classmethod
     def read(cls) -> "UserConfig":
-        if not user_config_path.exists():
+        if not USER_CONFIG_PATH.exists():
             return cls()
 
-        with user_config_path.open("r") as f:
+        with USER_CONFIG_PATH.open("r") as f:
             return cls.model_validate_json(f.read())
 
     def write(self) -> None:
         self._update_active()
-        user_config_path.parent.mkdir(parents=True, exist_ok=True)
-        with user_config_path.open("w") as f:
+
+        if not USER_CONFIG_PATH.parent.exists():
+            print(f":rocket: Creating user configuration directory: {USER_CONFIG_PATH.parent}")
+            USER_CONFIG_PATH.parent.mkdir(parents=True)
+
+        with USER_CONFIG_PATH.open("w") as f:
             f.write(self.model_dump_json(indent=2))
 
     @property
-    def server(self) -> ServerConfig:
+    def active_server(self) -> ServerConfig:
         self._update_active()
         if not self.active or not self.servers:
             print()
