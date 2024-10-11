@@ -8,13 +8,30 @@ from dreadnode_cli import __version__
 from dreadnode_cli.defaults import PLATFORM_BASE_URL
 
 
+# https://secariolabs.com/logging-raw-http-requests-in-python/
+def patch_send() -> None:
+    import http
+
+    old_send = http.client.HTTPConnection.send
+
+    def new_send(self, data):
+        print(f'{"-"*9} BEGIN REQUEST {"-"*9}')
+        print(data.decode("utf-8").strip())
+        print(f'{"-"*10} END REQUEST {"-"*10}')
+        return old_send(self, data)
+
+    http.client.HTTPConnection.send = new_send
+
+
 class Client:
     access_token: str | None = None
     base_url: str
 
-    def __init__(self, base_url: str = PLATFORM_BASE_URL, access_token: str | None = None):
+    def __init__(self, base_url: str = PLATFORM_BASE_URL, access_token: str | None = None, debug: bool = False):
         self.base_url = base_url.rstrip("/")
         self.access_token = access_token
+        if debug:
+            patch_send()
 
     def _get_headers(self, with_auth: bool = True, additional: dict[str, str] | None = None) -> dict[str, str]:
         headers = {
@@ -25,7 +42,6 @@ class Client:
         if with_auth:
             if self.access_token:
                 headers["Authorization"] = f"Bearer {self.access_token}"
-                # headers["X-API-Key"] = self.access_token
             else:
                 raise Exception("No access token set")
 
@@ -70,7 +86,7 @@ class Client:
             raise Exception("No refresh token set")
 
         url = f"{self.base_url}/api/auth/refresh"
-        headers = self._get_headers(with_auth=False, additional={"Content-Type": "application/x-www-form-urlencoded"})
+        headers = self._get_headers(with_auth=False)
         cookies = {"refresh_token": token_to_refresh}
 
         print(f":key: Refreshing access token for [bold link]{self.base_url}[/] ...")
