@@ -32,11 +32,12 @@ def init(
 ) -> None:
     """Initialize a new agent project."""
 
-    print()
-    name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template))
-    print()
+    if not name:
+        name = Prompt.ask("Project name: ")
 
+    template = Template(template)
+
+    directory = directory / name
     directory.mkdir(exist_ok=True)
 
     config_path = directory / ".dreadnode.json"
