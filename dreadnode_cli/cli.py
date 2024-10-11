@@ -1,9 +1,9 @@
-import getpass
 import os
 import typing as t
 
 import typer
 from rich import print
+from rich.prompt import Prompt
 
 import dreadnode_cli.api as api
 from dreadnode_cli.agent import cli as agent_cli
@@ -31,8 +31,7 @@ def login(
     # useful for Dockerized applications and whatnot
     password = os.getenv("DREADNODE_USER_PASSWORD")
     if not password:
-        password = getpass.getpass(f"password for {username}: ")
-        print()
+        password = Prompt.ask(f":key: Password for {username}: ", password=True)
 
     try:
         client = api.Client(base_url=server)
