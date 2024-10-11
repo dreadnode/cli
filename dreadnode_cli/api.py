@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 from rich import print
 
@@ -61,10 +63,13 @@ class Client:
         """Refresh the access token."""
 
         # FIXME: this doesn't work and always returns "Invalid token" somehow.
+        token_to_refresh = refresh_token or self.access_token
+        if not token_to_refresh:
+            raise Exception("No refresh token set")
 
         url = f"{self.base_url}/api/auth/refresh"
         headers = self._get_headers(with_auth=False, additional={"Content-Type": "application/x-www-form-urlencoded"})
-        cookies = {"refresh_token": refresh_token or self.access_token}
+        cookies = {"refresh_token": token_to_refresh}
 
         print(f":key: Refreshing access token for [bold link]{self.base_url}[/] ...")
 
@@ -76,7 +81,7 @@ class Client:
 
         return self.access_token
 
-    def list_challenges(self) -> dict:
+    def list_challenges(self) -> Any:
         """List all challenges."""
 
         url = f"{self.base_url}/api/challenges"
