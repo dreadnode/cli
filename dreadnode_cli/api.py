@@ -25,7 +25,7 @@ class Client:
         if with_auth:
             if self.access_token:
                 headers["Authorization"] = f"Bearer {self.access_token}"
-                headers["X-API-Key"] = self.access_token
+                # headers["X-API-Key"] = self.access_token
             else:
                 raise Exception("No access token set")
 
@@ -37,7 +37,7 @@ class Client:
     def _get_error_message(self, response: requests.Response) -> str:
         try:
             obj = response.json()
-            return str(obj.get("detail", f"{response.status_code} ({json.dumps(obj)})"))
+            return f'{response.status_code}: {obj.get("detail", json.dumps(obj))}'
         except Exception:
             return str(response.content)
 
