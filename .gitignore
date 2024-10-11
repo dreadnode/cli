@@ -58,3 +58,5 @@ dmypy.json
 
 # pytest
 .pytest_cache/
+
+/mock.*.json
