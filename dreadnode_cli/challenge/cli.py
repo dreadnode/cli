@@ -1,10 +1,8 @@
 import typer
-from rich import box, print
-from rich.table import Table
-
-from dreadnode_cli.config import UserConfig
+from rich import print
 
 import dreadnode_cli.api as api
+from dreadnode_cli.config import UserConfig
 
 cli = typer.Typer()
 

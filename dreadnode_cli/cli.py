@@ -5,14 +5,12 @@ import typing as t
 import typer
 from rich import print
 
+import dreadnode_cli.api as api
+from dreadnode_cli.agent import cli as agent_cli
+from dreadnode_cli.challenge import cli as challenge_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import MAIN_PROFILE_NAME, PLATFORM_BASE_URL
-import dreadnode_cli.api as api
-
 from dreadnode_cli.profile import cli as profile_cli
-from dreadnode_cli.challenge import cli as challenge_cli
-from dreadnode_cli.agent import cli as agent_cli
-
 
 cli = typer.Typer(no_args_is_help=True, help="Interact with the Dreadnode platform")
 
