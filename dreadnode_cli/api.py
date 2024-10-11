@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import requests
@@ -35,7 +36,8 @@ class Client:
 
     def _get_error_message(self, response: requests.Response) -> str:
         try:
-            return str(response.json().get("detail", "unknown error"))
+            obj = response.json()
+            return str(obj.get("detail", f"{response.status_code} ({json.dumps(obj)})"))
         except Exception:
             return str(response.content)
 
