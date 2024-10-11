@@ -5,15 +5,19 @@ import typing as t
 import typer
 from rich import print
 
-import dreadnode_cli.api as api
-from dreadnode_cli.agent import cli as agent_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import MAIN_PROFILE_NAME, PLATFORM_BASE_URL
+import dreadnode_cli.api as api
+
 from dreadnode_cli.profile import cli as profile_cli
+from dreadnode_cli.challenge import cli as challenge_cli
+from dreadnode_cli.agent import cli as agent_cli
+
 
 cli = typer.Typer(no_args_is_help=True, help="Interact with the Dreadnode platform")
 
 cli.add_typer(profile_cli, name="profile", help="Manage server profiles")
+cli.add_typer(challenge_cli, name="challenge", help="Crucible challenges")
 cli.add_typer(agent_cli, name="agent", help="Manage agents")
 
 
@@ -41,6 +45,25 @@ def login(
         ).write()
 
         print(f":white_check_mark: Authenticated as [bold cyan]{username}[/]")
+    except Exception as e:
+        print(f":cross_mark: {e}")
+
+
+@cli.command(help="Refresh the access token for a profile.")
+def refresh(
+    profile: t.Annotated[
+        str, typer.Option("--profile", "-p", help="Profile alias to assign / update")
+    ] = MAIN_PROFILE_NAME,
+) -> None:
+    try:
+        config = UserConfig.read().get_profile_config(profile)
+        if not config:
+            raise Exception(f"Profile [bold cyan]{profile}[/] not found")
+
+        client = api.Client(base_url=config.url, access_token=config.access_token)
+        new_access_token = client.refresh_token()
+
+        print(f":white_check_mark: Token refreshed for [bold cyan]{config.username}[/] -> {new_access_token}")
     except Exception as e:
         print(f":cross_mark: {e}")
 

@@ -17,6 +17,7 @@ def list() -> None:
     table.add_column("Profile")
     table.add_column("URL")
     table.add_column("Username")
+    table.add_column("Created At")
 
     current = config.active_server
 
@@ -26,6 +27,7 @@ def list() -> None:
             f"[bold]{profile}*[/]" if active_profile else profile,
             server.url,
             server.username,
+            server.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             style="cyan" if active_profile else None,
         )
 
@@ -35,7 +37,6 @@ def list() -> None:
 @cli.command(help="Set the active server profile")
 def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")]) -> None:
     config = UserConfig.read()
-
     if profile not in config.servers:
         print(f":exclamation: Profile [bold]{profile}[/] is not configured")
         return
@@ -52,13 +53,11 @@ def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")
 @cli.command(help="Remove a server profile")
 def forget(profile: t.Annotated[str, typer.Argument(help="Profile of the server to remove")]) -> None:
     config = UserConfig.read()
-
     if profile not in config.servers:
         print(f":exclamation: Profile [bold]{profile}[/] is not configured")
         return
 
-    del config.servers[profile]
-    config.write()
+    config.remove_profile_config(profile).write()
 
     print()
     print(f":axe: Forgot about [bold]{profile}[/]")

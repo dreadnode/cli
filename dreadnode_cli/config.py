@@ -12,7 +12,6 @@ class ServerConfig(pydantic.BaseModel):
     username: str
     access_token: str
     created_at: datetime.datetime = datetime.datetime.now()
-    updated_at: datetime.datetime | None = None
 
 
 class UserConfig(pydantic.BaseModel):
@@ -40,6 +39,9 @@ class UserConfig(pydantic.BaseModel):
 
         with USER_CONFIG_PATH.open("w") as f:
             f.write(self.model_dump_json(indent=2))
+
+    def get_profile_config(self, profile: str) -> ServerConfig | None:
+        return self.servers.get(profile)
 
     def set_profile_config(self, profile: str, config: ServerConfig) -> "UserConfig":
         self.servers[profile] = config
