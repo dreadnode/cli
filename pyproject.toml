@@ -13,6 +13,7 @@ typer = "^0.12.5"
 pydantic = "^2.9.2"
 jinja2 = "^3.1.4"
 requests = "^2.32.3"
+types-requests = "^2.32.0.20240914"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.8.0"
