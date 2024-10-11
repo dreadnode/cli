@@ -30,6 +30,8 @@ def init(
         Template, typer.Option("--template", "-t", help="The template to use for the project")
     ] = Template.basic,
 ) -> None:
+    """Initialize a new agent project."""
+
     print()
     name = Prompt.ask("Project name?", default=name or directory.name)
     template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template))
@@ -51,3 +53,54 @@ def init(
 
     print()
     print(f"Initialized [b]{directory}[/]")
+
+
+@cli.command()
+def status(
+    directory: t.Annotated[
+        pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
+    ] = pathlib.Path("."),
+) -> None:
+    """If currenty linked (some kind of active agent state) - show it's state."""
+    print("TODO")
+
+
+@cli.command()
+def versions(
+    directory: t.Annotated[
+        pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
+    ] = pathlib.Path("."),
+) -> None:
+    """List historical versions of this agent."""
+    print("TODO")
+
+
+@cli.command()
+def push(
+    directory: t.Annotated[
+        pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
+    ] = pathlib.Path("."),
+) -> None:
+    """Push a new version of the agent."""
+    print("TODO")
+
+
+@cli.command()
+def switch(
+    directory: t.Annotated[
+        pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
+    ] = pathlib.Path("."),
+    agent_id: t.Annotated[str | None, typer.Argument(help="Agent id")] = None,
+) -> None:
+    """Switch/link to a different agent."""
+    print("TODO")
+
+
+@cli.command()
+def links(
+    directory: t.Annotated[
+        pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
+    ] = pathlib.Path("."),
+) -> None:
+    """List all available links."""
+    print("TODO")
