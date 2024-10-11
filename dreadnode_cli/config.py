@@ -10,7 +10,7 @@ from dreadnode_cli.defaults import USER_CONFIG_PATH
 class ServerConfig(pydantic.BaseModel):
     url: str
     username: str
-    api_key: str
+    access_token: str
     created_at: datetime.datetime = datetime.datetime.now()
     updated_at: datetime.datetime | None = None
 
@@ -40,6 +40,15 @@ class UserConfig(pydantic.BaseModel):
 
         with USER_CONFIG_PATH.open("w") as f:
             f.write(self.model_dump_json(indent=2))
+
+    def set_profile_config(self, profile: str, config: ServerConfig) -> "UserConfig":
+        self.servers[profile] = config
+        return self
+
+    def remove_profile_config(self, profile: str) -> "UserConfig":
+        if profile in self.servers:
+            del self.servers[profile]
+        return self
 
     @property
     def active_server(self) -> ServerConfig:

@@ -1,10 +1,11 @@
-import typing as t
 import getpass
 import os
+import typing as t
 
 import typer
 from rich import print
 
+import dreadnode_cli.api as api
 from dreadnode_cli.agent import cli as agent_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import MAIN_PROFILE_NAME, PLATFORM_BASE_URL
@@ -16,7 +17,7 @@ cli.add_typer(profile_cli, name="profile", help="Manage server profiles")
 cli.add_typer(agent_cli, name="agent", help="Manage agents")
 
 
-@cli.command(help="Authenticate to the platform")
+@cli.command(help="Authenticate to the platform.")
 def login(
     username: t.Annotated[str, typer.Option("--username", "-u", help="Username to authenticate as")],
     server: t.Annotated[str, typer.Option("--server", "-s", help="URL of the server")] = PLATFORM_BASE_URL,
@@ -25,19 +26,34 @@ def login(
     ] = MAIN_PROFILE_NAME,
 ) -> None:
     # allow setting the password via the DREADNODE_USER_PASSWORD environment variable
+    # useful for Dockerized applications and whatnot
     password = os.getenv("DREADNODE_USER_PASSWORD")
-
     if not password:
         password = getpass.getpass(f"password for {username}: ")
         print()
 
-    print(f":key: Authenticating to [bold link]{server}[/] ...")
+    try:
+        client = api.Client(base_url=server)
+        access_token = client.login(username=username, password=password)
 
-    # TODO: Actually authenticate
-    api_key = "sk-1234"
+        UserConfig.read().set_profile_config(
+            profile, ServerConfig(username=username, url=server, access_token=access_token)
+        ).write()
 
-    config = UserConfig.read()
-    config.servers[profile] = ServerConfig(username=username, url=server, api_key=api_key)
-    config.write()
+        print(f":white_check_mark: Authenticated as [bold cyan]{username}[/]")
+    except Exception as e:
+        print(f":cross_mark: {e}")
 
-    print(f":key: Authenticated to [bold link]{server}[/] as [bold cyan]{username}[/]")
+
+@cli.command(help="Logout from the current profile.")
+def logout(
+    profile: t.Annotated[
+        str, typer.Option("--profile", "-p", help="Profile alias to assign / update")
+    ] = MAIN_PROFILE_NAME,
+) -> None:
+    try:
+        UserConfig.read().remove_profile_config(profile).write()
+
+        print(":white_check_mark: Logged out")
+    except Exception as e:
+        print(f":cross_mark: {e}")

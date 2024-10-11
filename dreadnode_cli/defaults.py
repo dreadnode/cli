@@ -1,6 +1,5 @@
-import pathlib
 import os
-
+import pathlib
 
 MAIN_PROFILE_NAME = "main"
 PLATFORM_BASE_URL = "https://crucible.dreadnode.io"

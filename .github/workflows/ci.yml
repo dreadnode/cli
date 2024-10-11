@@ -1,0 +1,64 @@
+name: Lint, Typecheck, and Test
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  ci:
+    strategy:
+        fail-fast: false
+        matrix:
+          python-version: ["3.9", "3.10", "3.11"]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Setup Poetry
+      uses: abatilo/actions-poetry@v2
+
+    - name: Configure local .venv
+      run: |
+        poetry config virtualenvs.create true --local
+        poetry config virtualenvs.in-project true --local
+
+    - uses: actions/cache@v3
+      name: Cache Dependencies
+      with:
+        path: ./.venv
+        key: venv-${{ hashFiles('poetry.lock') }}
+
+    - name: Install dependencies
+      run: poetry install --all-extras
+
+    - name: Verify version match
+      run: |
+        toml_version=$(grep -oP '(?<=version = ")[^"]+' pyproject.toml | head -1)
+        package_version=$(grep -oP '(?<=__version__ = ")[^"]+' dreadnode_cli/__init__.py)
+        
+        if [ "$toml_version" != "$package_version" ]; then
+          echo "Version mismatch detected!"
+          echo "Version in pyproject.toml: $toml_version"
+          echo "Version in package: $package_version"
+          exit 1
+        else
+          echo "Versions match: $toml_version"
+        fi
+
+    - name: Linting
+      run: poetry run ruff dreadnode_cli/
+
+    - name: Typecheck
+      run: poetry run mypy dreadnode_cli/
+
+    - name: Tests
+      run: poetry run pytest
