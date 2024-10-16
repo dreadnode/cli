@@ -198,8 +198,8 @@ class Client:
         elif "refresh_token" not in resp:
             raise Exception("no refresh_token in refresh response")
 
-        self.auth.access_token = Token(resp["access_token"])
-        self.auth.refresh_token = Token(resp["refresh_token"])
+        # update the auth data
+        self.auth = Authentication(resp["access_token"], resp["refresh_token"])
 
         return self.auth
 
