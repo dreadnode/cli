@@ -36,6 +36,10 @@ class Token:
         """Get number of seconds left until the token expires."""
         return int((self.expires_at - datetime.now()).total_seconds())
 
+    def is_expired(self) -> bool:
+        """Return True if the token is expired or close to it."""
+        return self.ttl() <= DEFAULT_TOKEN_MAX_TTL
+
 
 class Authentication:
     """Authentication data for the Dreadnode API."""
@@ -48,7 +52,8 @@ class Authentication:
         self.refresh_token = Token(refresh_token)
 
     def is_expired(self) -> bool:
-        return self.refresh_token.ttl() <= DEFAULT_TOKEN_MAX_TTL or self.access_token.ttl() <= DEFAULT_TOKEN_MAX_TTL
+        """Return True if either of the tokens is expired or close to it."""
+        return self.refresh_token.is_expired() or self.access_token.is_expired()
 
 
 class Client:
@@ -70,6 +75,8 @@ class Client:
         self.auth = auth
 
     async def _log_request(self, request: httpx.Request) -> None:
+        """Log every request to the console if debug is enabled."""
+
         if self.debug:
             print("-------------------------------------------")
             print(f"[bold]{request.method}[/] {request.url}")
@@ -78,6 +85,8 @@ class Client:
             print("-------------------------------------------")
 
     def _get_headers(self, additional: dict[str, str] | None = None) -> dict[str, str]:
+        """Get the common headers for every request."""
+
         headers = {
             "User-Agent": f"dreadnode-cli/{__version__}",
             "Accept": "application/json",
@@ -89,12 +98,19 @@ class Client:
         return headers
 
     def _get_auth_cookies(self) -> dict[str, str]:
+        """Get the authentication cookies for the request. Will raise an error if not authenticated or if the tokens are expired."""
+
         if not self.auth:
-            raise Exception("Not authenticated")
+            raise Exception("not authenticated")
+
+        elif self.auth.is_expired():
+            raise Exception("authentication expired")
 
         return {"refresh_token": self.auth.refresh_token.data}
 
     def _get_error_message(self, response: httpx.Response) -> str:
+        """Get the error message from the response."""
+
         try:
             obj = response.json()
             return f'{response.status_code}: {obj.get("detail", json.dumps(obj))}'
@@ -109,7 +125,11 @@ class Client:
         auth: bool = True,
         allow_non_ok: bool = False,
     ) -> httpx.Response:
+        """Make a request to the Dreadnode API."""
+
+        # common headers
         headers = self._get_headers()
+        # if authentication is required add the necessary cookies (will check for valid auth data)
         cookies = self._get_auth_cookies() if auth else None
 
         async with httpx.AsyncClient(
