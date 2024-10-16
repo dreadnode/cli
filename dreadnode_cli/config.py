@@ -1,5 +1,4 @@
 import pydantic
-import typer
 from rich import print
 
 from dreadnode_cli.defaults import USER_CONFIG_PATH
@@ -47,11 +46,8 @@ class UserConfig(pydantic.BaseModel):
     def set_active_config(self, config: ServerConfig) -> "UserConfig":
         self._update_active()
         if not self.active or not self.servers:
-            print()
-            print(":exclamation: No servers are configured")
-            print()
-            print("Use [bold]dreadnode login[/] to authenticate")
-            raise typer.Exit(1)
+            raise Exception("No servers are configured, use [bold]dreadnode login[/] to authenticate")
+
         self.servers[self.active] = config
         return self
 
@@ -64,10 +60,6 @@ class UserConfig(pydantic.BaseModel):
     def active_server(self) -> ServerConfig:
         self._update_active()
         if not self.active or not self.servers:
-            print()
-            print(":exclamation: No servers are configured")
-            print()
-            print("Use [bold]dreadnode login[/] to authenticate")
-            raise typer.Exit(1)
+            raise Exception("No servers are configured, use [bold]dreadnode login[/] to authenticate")
 
         return self.servers[self.active]
