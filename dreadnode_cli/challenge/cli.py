@@ -26,10 +26,13 @@ def list() -> None:
     try:
         config = UserConfig.read().active_server
         auth = api.Authentication(config.access_token, config.refresh_token)
+        client = api.Client(base_url=config.url, auth=auth)
+
         if auth.is_expired():
+            # this returns: 401: Token has expired
+            # asyncio.run(client.refresh_auth())
             raise Exception("authentication expired")
 
-        client = api.Client(base_url=config.url, auth=auth)
         challenges = asyncio.run(client.list_challenges())
 
         table = Table(box=box.ROUNDED)
