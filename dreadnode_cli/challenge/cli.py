@@ -8,7 +8,7 @@ from rich.table import Table
 import dreadnode_cli.api as api
 from dreadnode_cli.config import UserConfig
 
-cli = typer.Typer()
+cli = typer.Typer(no_args_is_help=True, help="Visualize and interact with the Crucible challenges")
 
 
 def format_difficulty(difficulty: str) -> str:

@@ -1,8 +1,34 @@
 import pathlib
 import typing as t
+from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
 from rich.prompt import Prompt
+
+
+def time_to(future_datetime: datetime) -> str:
+    """Get a string describing the time difference between a future datetime and now."""
+
+    now = datetime.now()
+    time_difference = future_datetime - now
+
+    days = time_difference.days
+    seconds = time_difference.seconds
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+
+    result = []
+    if days > 0:
+        result.append(f"{days} days")
+    if hours > 0:
+        result.append(f"{hours} hours")
+    if minutes > 0:
+        result.append(f"{minutes} minutes")
+    if seconds > 0:
+        result.append(f"{seconds} seconds")
+
+    return ", ".join(result) if result else "Just now"
 
 
 def copy_template(src: pathlib.Path, dest: pathlib.Path, context: dict[str, t.Any]) -> None:

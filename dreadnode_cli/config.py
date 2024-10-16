@@ -40,8 +40,6 @@ class UserConfig(pydantic.BaseModel):
     def write(self) -> None:
         """Write the user configuration to the file system."""
 
-        self._update_active()
-
         if not USER_CONFIG_PATH.parent.exists():
             print(f":rocket: creating user configuration directory: {USER_CONFIG_PATH.parent}")
             USER_CONFIG_PATH.parent.mkdir(parents=True)

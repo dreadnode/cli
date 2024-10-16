@@ -9,7 +9,7 @@ from rich.prompt import Prompt
 from dreadnode_cli.agent.config import AgentConfig
 from dreadnode_cli.utils import copy_template
 
-cli = typer.Typer()
+cli = typer.Typer(no_args_is_help=True, help="TODO")
 
 
 class Template(str, enum.Enum):
