@@ -52,10 +52,17 @@ def login(
         if auth is None:
             raise Exception("authentication failed")
 
+        access_token = auth.get("access_token")
+        refresh_token = auth.get("refresh_token")
+
+        print()
+        print(f"[DEBUG] access_token expires in: {api.Token(access_token).expires_at}")
+        print(f"[DEBUG] refresh_token expires in: {api.Token(refresh_token).expires_at}")
+
         # store the authentication data for the profile
         UserConfig.read().set_profile_config(
             profile,
-            ServerConfig(url=server, access_token=auth.get("access_token"), refresh_token=auth.get("refresh_token")),
+            ServerConfig(url=server, access_token=access_token, refresh_token=refresh_token),
         ).write()
 
         print(":white_check_mark: authentication successful")

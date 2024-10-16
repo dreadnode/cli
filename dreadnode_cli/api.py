@@ -86,30 +86,6 @@ class Client:
             print("Content:", request.content)
             print("-------------------------------------------")
 
-    def _get_headers(self, additional: dict[str, str] | None = None) -> dict[str, str]:
-        """Get the common headers for every request."""
-
-        headers = {
-            "User-Agent": f"dreadnode-cli/{__version__}",
-            "Accept": "application/json",
-        }
-
-        if additional:
-            headers.update(additional)
-
-        return headers
-
-    def _get_auth_cookies(self) -> dict[str, str]:
-        """Get the authentication cookies for the request. Will raise an error if not authenticated or if the tokens are expired."""
-
-        if not self.auth:
-            raise Exception("not authenticated")
-
-        elif self.auth.is_expired():
-            raise Exception("authentication expired")
-
-        return {"refresh_token": self.auth.refresh_token.data}
-
     def _get_error_message(self, response: httpx.Response) -> str:
         """Get the error message from the response."""
 
@@ -129,15 +105,48 @@ class Client:
     ) -> httpx.Response:
         """Make a request to the Dreadnode API."""
 
-        # common headers
-        headers = self._get_headers()
-        # if authentication is required add the necessary cookies (will check for valid auth data)
-        cookies = self._get_auth_cookies() if auth else None
+        cookies = None
+        headers = {
+            "User-Agent": f"dreadnode-cli/{__version__}",
+            "Accept": "application/json",
+        }
+
+        if auth:
+            # check if we have valid auth data
+            if not self.auth:
+                raise Exception("not authenticated")
+            elif self.auth.is_expired():
+                raise Exception("authentication expired")
+            # The refresh_token can be sent along w/ requests as a cookie and the server will
+            # automatically refresh the access_token if needed and put it back into
+            # the access_token cookie.
+            cookies = {"refresh_token": self.auth.refresh_token.data}
+            # The access_token should be used for all requests.
+            headers["Authorization"] = f"Bearer {self.auth.access_token.data}"
 
         async with httpx.AsyncClient(
             cookies=cookies, headers=headers, event_hooks={"request": [self._log_request]}
         ) as client:
             response = await client.request(method, f"{self.base_url}{path}", json=json_data)
+
+            # see if the endpoint returned refreshed tokens
+            access_token = response.cookies.get("access_token")
+            refresh_token = response.cookies.get("refresh_token")
+
+            if access_token or refresh_token:
+                print(f"[DEBUG] got tokens from cookies access_token={access_token} refresh_token={refresh_token}")
+                print(f"[DEBUG]   access_token expires in: {Token(access_token).expires_at}")
+                print(f"[DEBUG]   refresh_token expires in: {Token(refresh_token).expires_at}")
+
+            if access_token and refresh_token:
+                # update auth data only if it changed
+                if not self.auth or (
+                    self.auth
+                    and self.auth.access_token.data == access_token
+                    and self.auth.refresh_token.data == refresh_token
+                ):
+                    self.auth = Authentication(access_token, refresh_token)
+
             if allow_non_ok or response.status_code == 200:
                 return response
             else:
