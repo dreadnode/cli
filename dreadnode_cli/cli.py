@@ -19,21 +19,6 @@ cli.add_typer(challenge_cli, name="challenge", help="Crucible challenges")
 cli.add_typer(agent_cli, name="agent", help="Manage agents")
 
 
-async def authentication_flow(server: str) -> t.Any:
-    client = api.Client(base_url=server)
-
-    print(":laptop_computer: requesting device code ...")
-
-    codes = await client.get_device_codes()
-    user_code = codes.get("user_code")
-
-    print(
-        f":link: visit {client.url_for_user_code(user_code)} in your browser to verify this device with the code [bold]{user_code}[/]"
-    )
-
-    return await client.poll_for_token(codes.get("device_code"))
-
-
 @cli.command(help="Authenticate to the platform.")
 def login(
     server: t.Annotated[str, typer.Option("--server", "-s", help="URL of the server")] = PLATFORM_BASE_URL,
@@ -47,8 +32,27 @@ def login(
         if env_server:
             server = env_server
 
-        auth = asyncio.run(authentication_flow(server))
+        # create client with no auth data
+        client = api.Client(base_url=server)
 
+        print(":laptop_computer: requesting device code ...")
+
+        # request user and device codes
+        codes = asyncio.run(client.get_device_codes())
+
+        # present verification URL to user
+        user_code = codes.get("user_code")
+        device_code = codes.get("device_code")
+        print(
+            f":link: visit {client.url_for_user_code(user_code)} in your browser to verify this device with the code [bold]{user_code}[/]"
+        )
+
+        # poll for the access token after user verification
+        auth = asyncio.run(client.poll_for_token(device_code))
+        if auth is None:
+            raise Exception("authentication failed")
+
+        # store the authentication data for the profile
         UserConfig.read().set_profile_config(
             profile,
             ServerConfig(url=server, access_token=auth.get("access_token"), refresh_token=auth.get("refresh_token")),
