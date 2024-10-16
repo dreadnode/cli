@@ -214,6 +214,8 @@ class Client:
 
 
 async def setup_authenticated_client(config: ServerConfig, force_refresh: bool = False) -> Client:
+    """Create an API client and refresh the authentication data if it is close to expiry."""
+
     # load existing auth data
     auth = Authentication(config.access_token, config.refresh_token)
     client = Client(base_url=config.url, auth=auth)
