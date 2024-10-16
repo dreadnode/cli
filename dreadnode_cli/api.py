@@ -1,110 +1,191 @@
+import asyncio
+import base64
 import json
+from datetime import datetime, timezone
 from typing import Any
 
-import requests
+import httpx
 from rich import print
 
 from dreadnode_cli import __version__
-from dreadnode_cli.defaults import PLATFORM_BASE_URL
+from dreadnode_cli.defaults import (
+    DEFAULT_MAX_POLL_TIME,
+    DEFAULT_POLL_INTERVAL,
+    DEFAULT_TOKEN_MAX_TTL,
+    PLATFORM_BASE_URL,
+)
 
 
-# https://secariolabs.com/logging-raw-http-requests-in-python/
-def patch_send() -> None:
-    import http
+def _parse_jwt_expiration(token: str) -> datetime:
+    _, b64payload, _ = token.split(".")
+    payload = base64.urlsafe_b64decode(b64payload + "==").decode("utf-8")
+    return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
-    old_send = http.client.HTTPConnection.send
 
-    def new_send(self, data):
-        print(f'{"-"*9} BEGIN REQUEST {"-"*9}')
-        print(data.decode("utf-8").strip())
-        print(f'{"-"*10} END REQUEST {"-"*10}')
-        return old_send(self, data)
+class Token:
+    """A JWT token with an expiration time."""
 
-    http.client.HTTPConnection.send = new_send
+    data: str
+    expires_at: datetime
+
+    def __init__(self, token: str):
+        self.data = token
+        self.expires_at = _parse_jwt_expiration(token)
+
+    def ttl(self) -> int:
+        """Get number of seconds left until the token expires."""
+        return int((self.expires_at - datetime.now()).total_seconds())
+
+
+class Authentication:
+    """Authentication data for the Dreadnode API."""
+
+    access_token: Token
+    refresh_token: Token
+
+    def __init__(self, access_token: str, refresh_token: str):
+        self.access_token = Token(access_token)
+        self.refresh_token = Token(refresh_token)
+
+    def is_expired(self) -> bool:
+        return self.refresh_token.ttl() <= DEFAULT_TOKEN_MAX_TTL or self.access_token.ttl() <= DEFAULT_TOKEN_MAX_TTL
 
 
 class Client:
-    access_token: str | None = None
+    """Client for the Dreadnode API."""
+
+    debug: bool = False
+
     base_url: str
+    auth: Authentication | None = None
 
-    def __init__(self, base_url: str = PLATFORM_BASE_URL, access_token: str | None = None, debug: bool = False):
+    def __init__(
+        self,
+        base_url: str = PLATFORM_BASE_URL,
+        auth: Authentication | None = None,
+        debug: bool = False,
+    ):
         self.base_url = base_url.rstrip("/")
-        self.access_token = access_token
-        if debug:
-            patch_send()
+        self.debug = debug
+        self.auth = auth
 
-    def _get_headers(self, with_auth: bool = True, additional: dict[str, str] | None = None) -> dict[str, str]:
+    async def _log_request(self, request: httpx.Request) -> None:
+        if self.debug:
+            print("-------------------------------------------")
+            print(f"[bold]{request.method}[/] {request.url}")
+            print("Headers:", request.headers)
+            print("Content:", request.content)
+            print("-------------------------------------------")
+
+    def _get_headers(self, additional: dict[str, str] | None = None) -> dict[str, str]:
         headers = {
             "User-Agent": f"dreadnode-cli/{__version__}",
             "Accept": "application/json",
         }
-
-        if with_auth:
-            if self.access_token:
-                headers["Authorization"] = f"Bearer {self.access_token}"
-            else:
-                raise Exception("No access token set")
 
         if additional:
             headers.update(additional)
 
         return headers
 
-    def _get_error_message(self, response: requests.Response) -> str:
+    def _get_auth_cookies(self) -> dict[str, str]:
+        if not self.auth:
+            raise Exception("Not authenticated")
+
+        return {"refresh_token": self.auth.refresh_token.data}
+
+    def _get_error_message(self, response: httpx.Response) -> str:
         try:
             obj = response.json()
             return f'{response.status_code}: {obj.get("detail", json.dumps(obj))}'
         except Exception:
             return str(response.content)
 
-    def login(self, username: str, password: str) -> str:
-        """Login to the platform and return the API key."""
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        json_data: dict[str, str] | None = None,
+        auth: bool = True,
+        allow_non_ok: bool = False,
+    ) -> httpx.Response:
+        headers = self._get_headers()
+        cookies = self._get_auth_cookies() if auth else None
 
-        url = f"{self.base_url}/api/auth/login"
-        headers = self._get_headers(with_auth=False, additional={"Content-Type": "application/x-www-form-urlencoded"})
-        form_data = {
-            "username": username,
-            "password": password,
-        }
+        async with httpx.AsyncClient(
+            cookies=cookies, headers=headers, event_hooks={"request": [self._log_request]}
+        ) as client:
+            response = await client.request(method, f"{self.base_url}{path}", json=json_data)
+            if allow_non_ok or response.status_code == 200:
+                return response
+            else:
+                raise Exception(self._get_error_message(response))
 
-        print(f":key: Authenticating to [bold link]{self.base_url}[/] as [bold cyan]{username}[/] ...")
+    def url_for_user_code(self, user_code: str) -> str:
+        """Get the URL to verify the user code."""
 
-        response = requests.post(url, data=form_data, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"Authentication failed: {self._get_error_message(response)}")
+        return f"{self.base_url}/account/device?code={user_code}"
 
-        self.access_token = str(response.json().get("access_token"))
+    async def get_device_codes(self) -> Any:
+        """Start the authentication flow by requesting user and device codes."""
 
-        return self.access_token
+        response = await self._request("POST", "/api/auth/device/code", auth=False)
+        return response.json()
 
-    def refresh_token(self, refresh_token: str | None = None) -> str:
-        """Refresh the access token."""
+    async def poll_for_token(
+        self, device_code: str, interval: int = DEFAULT_POLL_INTERVAL, max_poll_time: int = DEFAULT_MAX_POLL_TIME
+    ) -> Any | None:
+        """Poll for the access token with the given device code."""
 
-        # FIXME: this doesn't work and always returns "Invalid token" somehow.
-        token_to_refresh = refresh_token or self.access_token
-        if not token_to_refresh:
-            raise Exception("No refresh token set")
+        start_time = datetime.now(timezone.utc)
+        while (datetime.now(timezone.utc) - start_time).total_seconds() < max_poll_time:
+            response = await self._request(
+                "POST", "/api/auth/device/token", json_data={"device_code": device_code}, auth=False, allow_non_ok=True
+            )
 
-        url = f"{self.base_url}/api/auth/refresh"
-        headers = self._get_headers(with_auth=False)
-        cookies = {"refresh_token": token_to_refresh}
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 400:
+                error_data = response.json()
+                if error_data.get("detail") == "Device code not verified":
+                    print("Waiting for user verification...")
+                elif error_data.get("detail") == "Device code expired":
+                    raise Exception("Device code has expired.")
+                else:
+                    raise Exception(f"Unexpected error: {self._get_error_message(response)}")
+            elif response.status_code != 401:
+                raise Exception(f"Unexpected status code: {response.status_code}")
 
-        print(f":key: Refreshing access token for [bold link]{self.base_url}[/] ...")
+            await asyncio.sleep(interval)
 
-        response = requests.post(url, headers=headers, cookies=cookies, data={})
-        if response.status_code != 200:
-            raise Exception(f"Refresh token failed: {self._get_error_message(response)}")
+        return None
 
-        self.access_token = str(response.json().get("access_token"))
+    async def refresh_auth(self) -> Authentication:
+        """Refresh the authentication data."""
 
-        return self.access_token
+        if not self.auth:
+            raise Exception("not authenticated")
 
-    def list_challenges(self) -> Any:
+        print(":water_wave: refreshing authentication data ...")
+
+        response = await self._request(
+            "POST", "/api/auth/refresh", auth=False, json_data={"refresh_token": self.auth.refresh_token.data}
+        )
+        # new tokens set via cookies
+        resp = dict(response.cookies)
+        if "access_token" not in resp:
+            raise Exception("no access_token in refresh response")
+        elif "refresh_token" not in resp:
+            raise Exception("no refresh_token in refresh response")
+
+        self.auth.access_token = Token(resp["access_token"])
+        self.auth.refresh_token = Token(resp["refresh_token"])
+
+        return self.auth
+
+    async def list_challenges(self) -> Any:
         """List all challenges."""
 
-        url = f"{self.base_url}/api/challenges"
-        response = requests.get(url, headers=self._get_headers())
-        if response.status_code != 200:
-            raise Exception(self._get_error_message(response))
+        response = await self._request("GET", "/api/challenges")
 
         return response.json()

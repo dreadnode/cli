@@ -1,5 +1,3 @@
-import datetime
-
 import pydantic
 import typer
 from rich import print
@@ -9,9 +7,8 @@ from dreadnode_cli.defaults import USER_CONFIG_PATH
 
 class ServerConfig(pydantic.BaseModel):
     url: str
-    username: str
     access_token: str
-    created_at: datetime.datetime = datetime.datetime.now()
+    refresh_token: str
 
 
 class UserConfig(pydantic.BaseModel):
@@ -45,6 +42,17 @@ class UserConfig(pydantic.BaseModel):
 
     def set_profile_config(self, profile: str, config: ServerConfig) -> "UserConfig":
         self.servers[profile] = config
+        return self
+
+    def set_active_config(self, config: ServerConfig) -> "UserConfig":
+        self._update_active()
+        if not self.active or not self.servers:
+            print()
+            print(":exclamation: No servers are configured")
+            print()
+            print("Use [bold]dreadnode login[/] to authenticate")
+            raise typer.Exit(1)
+        self.servers[self.active] = config
         return self
 
     def remove_profile_config(self, profile: str) -> "UserConfig":

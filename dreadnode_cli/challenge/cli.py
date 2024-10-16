@@ -1,3 +1,4 @@
+import asyncio
 import typing as t
 
 import typer
@@ -24,8 +25,12 @@ def format_difficulty(difficulty: str) -> str:
 def list() -> None:
     try:
         config = UserConfig.read().active_server
-        client = api.Client(base_url=config.url, access_token=config.access_token)
-        challenges = client.list_challenges()
+        auth = api.Authentication(config.access_token, config.refresh_token)
+        if auth.is_expired():
+            raise Exception("authentication expired")
+
+        client = api.Client(base_url=config.url, auth=auth)
+        challenges = asyncio.run(client.list_challenges())
 
         table = Table(box=box.ROUNDED)
         table.add_column("Title")
