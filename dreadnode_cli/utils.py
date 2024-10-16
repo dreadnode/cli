@@ -1,3 +1,5 @@
+import base64
+import json
 import pathlib
 import typing as t
 from datetime import datetime
@@ -29,6 +31,14 @@ def time_to(future_datetime: datetime) -> str:
         result.append(f"{seconds} seconds")
 
     return ", ".join(result) if result else "Just now"
+
+
+def parse_jwt_token_expiration(token: str) -> datetime:
+    """Return the expiration date from a JWT token."""
+
+    _, b64payload, _ = token.split(".")
+    payload = base64.urlsafe_b64decode(b64payload + "==").decode("utf-8")
+    return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
 
 def copy_template(src: pathlib.Path, dest: pathlib.Path, context: dict[str, t.Any]) -> None:

@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 from datetime import datetime, timezone
 from typing import Any
@@ -7,7 +6,7 @@ from typing import Any
 import httpx
 from rich import print
 
-from dreadnode_cli import __version__
+from dreadnode_cli import __version__, utils
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import (
     DEFAULT_MAX_POLL_TIME,
@@ -15,12 +14,6 @@ from dreadnode_cli.defaults import (
     DEFAULT_TOKEN_MAX_TTL,
     PLATFORM_BASE_URL,
 )
-
-
-def _parse_jwt_expiration(token: str) -> datetime:
-    _, b64payload, _ = token.split(".")
-    payload = base64.urlsafe_b64decode(b64payload + "==").decode("utf-8")
-    return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
 
 class Token:
@@ -31,7 +24,7 @@ class Token:
 
     def __init__(self, token: str):
         self.data = token
-        self.expires_at = _parse_jwt_expiration(token)
+        self.expires_at = utils.parse_jwt_token_expiration(token)
 
     def ttl(self) -> int:
         """Get number of seconds left until the token expires."""
@@ -226,7 +219,7 @@ async def setup_authenticated_client(config: ServerConfig, force_refresh: bool =
     client = Client(base_url=config.url, auth=auth)
 
     if auth.is_expired():
-        raise Exception("authentication expired")
+        raise Exception("authentication expired, use [bold]dreadnode login[/] to authenticate again")
     elif force_refresh or auth.is_close_to_expiry():
         # update the auth data
         new_auth = await client.refresh_auth()
