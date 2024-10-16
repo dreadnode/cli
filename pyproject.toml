@@ -38,25 +38,25 @@ line-length = 120
 indent-width = 4
 target-version = "py310"
 select = [
-    "E",     # pycodestyle errors
-    "W",     # pycodestyle warnings
-    "F",     # pyflakes
-    "I",     # isort
-    "C",     # flake8-comprehensions
-    "B",     # flake8-bugbear
-    "UP",    # pyupgrade
-    "NPY",   # numpydoc
-    "TCH",   # typecheck
-    "A",     # flake8-annotations
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "NPY", # numpydoc
+    "TCH", # typecheck
+    "A",   # flake8-annotations
 ]
 ignore = [
-    "E501",  # line too long, handled by ruff
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-    "W191",  # indentation contains tabs
-    "F722",  # syntax error in forward annotation
-    "A001",  # shadowing built-in
-    "A002",  # shadowing built-in
+    "E501", # line too long, handled by ruff
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+    "W191", # indentation contains tabs
+    "F722", # syntax error in forward annotation
+    "A001", # shadowing built-in
+    "A002", # shadowing built-in
 ]
 exclude = [
     ".git",
