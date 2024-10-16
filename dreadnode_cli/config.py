@@ -47,6 +47,8 @@ class UserConfig(pydantic.BaseModel):
         with USER_CONFIG_PATH.open("w") as f:
             f.write(self.model_dump_json(indent=2))
 
+        print(f":white_check_mark: user configuration saved to [bold]{USER_CONFIG_PATH}[/]")
+
     def get_profile_config(self, profile: str) -> ServerConfig | None:
         """Get the server configuration for the given profile or None if not set."""
 
@@ -63,6 +65,7 @@ class UserConfig(pydantic.BaseModel):
 
         self._update_active()
         self.servers[self.active] = config
+
         return self
 
     def remove_profile_config(self, profile: str) -> "UserConfig":

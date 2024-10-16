@@ -8,6 +8,7 @@ import httpx
 from rich import print
 
 from dreadnode_cli import __version__
+from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import (
     DEFAULT_MAX_POLL_TIME,
     DEFAULT_POLL_INTERVAL,
@@ -37,7 +38,11 @@ class Token:
         return int((self.expires_at - datetime.now()).total_seconds())
 
     def is_expired(self) -> bool:
-        """Return True if the token is expired or close to it."""
+        """Return True if the token is expired."""
+        return self.ttl() <= 0
+
+    def is_close_to_expiry(self) -> bool:
+        """Return True if the token is close to expiry."""
         return self.ttl() <= DEFAULT_TOKEN_MAX_TTL
 
 
@@ -52,8 +57,12 @@ class Authentication:
         self.refresh_token = Token(refresh_token)
 
     def is_expired(self) -> bool:
-        """Return True if either of the tokens is expired or close to it."""
+        """Return True if either of the tokens is expired."""
         return self.refresh_token.is_expired() or self.access_token.is_expired()
+
+    def is_close_to_expiry(self) -> bool:
+        """Return True if either of the tokens is close to expiry."""
+        return self.refresh_token.is_close_to_expiry() or self.access_token.is_close_to_expiry()
 
 
 class Client:
@@ -209,3 +218,22 @@ class Client:
         response = await self._request("GET", "/api/challenges")
 
         return response.json()
+
+
+async def setup_authenticated_client(config: ServerConfig, force_refresh: bool = False) -> Client:
+    # load existing auth data
+    auth = Authentication(config.access_token, config.refresh_token)
+    client = Client(base_url=config.url, auth=auth)
+
+    if auth.is_expired():
+        raise Exception("authentication expired")
+    elif force_refresh or auth.is_close_to_expiry():
+        # update the auth data
+        new_auth = await client.refresh_auth()
+        # save on disk
+        config.access_token = new_auth.access_token.data
+        config.refresh_token = new_auth.refresh_token.data
+        # print(f"new refresh token expires at: {new_auth.refresh_token.expires_at}")
+        UserConfig.read().set_active_config(config).write()
+
+    return client

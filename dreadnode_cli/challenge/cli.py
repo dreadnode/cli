@@ -25,13 +25,7 @@ def format_difficulty(difficulty: str) -> str:
 def list() -> None:
     try:
         config = UserConfig.read().active_server
-        auth = api.Authentication(config.access_token, config.refresh_token)
-        client = api.Client(base_url=config.url, auth=auth)
-
-        if auth.is_expired():
-            # this returns: 401: Token has expired
-            # asyncio.run(client.refresh_auth())
-            raise Exception("authentication expired")
+        client = asyncio.run(api.setup_authenticated_client(config))
 
         challenges = asyncio.run(client.list_challenges())
 

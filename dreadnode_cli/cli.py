@@ -34,7 +34,7 @@ async def authentication_flow(server: str) -> t.Any:
     return await client.poll_for_token(codes.get("device_code"))
 
 
-@cli.command(help="Authenticate to the platform.", name="login")
+@cli.command(help="Authenticate to the platform.")
 def login(
     server: t.Annotated[str, typer.Option("--server", "-s", help="URL of the server")] = PLATFORM_BASE_URL,
     profile: t.Annotated[
@@ -55,5 +55,13 @@ def login(
         ).write()
 
         print(":white_check_mark: authentication successful")
+    except Exception as e:
+        print(f":cross_mark: {e}")
+
+
+@cli.command(help="Refresh the authentication data for the active server profile.")
+def refresh() -> None:
+    try:
+        asyncio.run(api.setup_authenticated_client(UserConfig.read().active_server, force_refresh=True))
     except Exception as e:
         print(f":cross_mark: {e}")
