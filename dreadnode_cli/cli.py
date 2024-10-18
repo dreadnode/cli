@@ -6,7 +6,6 @@ import typer
 from rich import print
 
 from dreadnode_cli import api
-from dreadnode_cli.agent import cli as agent_cli
 from dreadnode_cli.challenge import cli as challenge_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import MAIN_PROFILE_NAME, PLATFORM_BASE_URL
@@ -16,7 +15,7 @@ cli = typer.Typer(no_args_is_help=True, help="Interact with the Dreadnode platfo
 
 cli.add_typer(profile_cli, name="profile", help="Manage server profiles")
 cli.add_typer(challenge_cli, name="challenge", help="Crucible challenges")
-cli.add_typer(agent_cli, name="agent", help="Manage agents")
+# cli.add_typer(agent_cli, name="agent", help="Manage agents")
 
 
 @cli.command(help="Authenticate to the platform.")
