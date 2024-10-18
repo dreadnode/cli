@@ -25,14 +25,14 @@ def list() -> None:
 
         for profile, server in config.servers.items():
             active_profile = server == current
-            access_token = Token(server.access_token)
+            refresh_token = Token(server.refresh_token)
 
             table.add_row(
                 f"[bold]{profile}*[/]" if active_profile else profile,
                 server.url,
                 "[red]expired[/]"
-                if access_token.is_expired()
-                else f'{access_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} ({utils.time_to(access_token.expires_at)})',
+                if refresh_token.is_expired()
+                else f'{refresh_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} ({utils.time_to(refresh_token.expires_at)})',
                 style="cyan" if active_profile else None,
             )
 

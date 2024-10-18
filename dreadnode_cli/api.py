@@ -44,10 +44,12 @@ class Authentication:
 
     access_token: Token
     refresh_token: Token
+    needs_flush: bool = False
 
-    def __init__(self, access_token: str, refresh_token: str):
+    def __init__(self, access_token: str, refresh_token: str, needs_flush: bool = False):
         self.access_token = Token(access_token)
         self.refresh_token = Token(refresh_token)
+        self.needs_flush = needs_flush
 
     def is_expired(self) -> bool:
         """Return True if either of the tokens is expired."""
@@ -133,11 +135,6 @@ class Client:
             access_token = response.cookies.get("access_token")
             refresh_token = response.cookies.get("refresh_token")
 
-            if access_token or refresh_token:
-                print(f"[DEBUG] got tokens from cookies access_token={access_token} refresh_token={refresh_token}")
-                print(f"[DEBUG]   access_token expires in: {Token(access_token).expires_at}")
-                print(f"[DEBUG]   refresh_token expires in: {Token(refresh_token).expires_at}")
-
             if access_token and refresh_token:
                 # update auth data only if it changed
                 if not self.auth or (
@@ -145,7 +142,8 @@ class Client:
                     and self.auth.access_token.data == access_token
                     and self.auth.refresh_token.data == refresh_token
                 ):
-                    self.auth = Authentication(access_token, refresh_token)
+                    # this will be saved to disk on exit
+                    self.auth = Authentication(access_token, refresh_token, needs_flush=True)
 
             if allow_non_ok or response.status_code == 200:
                 return response
@@ -209,8 +207,8 @@ class Client:
         elif "refresh_token" not in resp:
             raise Exception("no refresh_token in refresh response")
 
-        # update the auth data
-        self.auth = Authentication(resp["access_token"], resp["refresh_token"])
+        # update the auth data, this will be saved to disk on exit
+        self.auth = Authentication(resp["access_token"], resp["refresh_token"], needs_flush=True)
 
         return self.auth
 
@@ -221,15 +219,43 @@ class Client:
 
         return response.json()
 
+    async def get_challenge_artifact(self, challenge: str, artifact_name: str) -> bytes:
+        """Get a challenge artifact."""
 
-async def setup_authenticated_client(config: ServerConfig, force_refresh: bool = False) -> Client:
+        response = await self._request("GET", f"/api/artifacts/{challenge}/{artifact_name}")
+
+        return response.content
+
+    async def submit_challenge_flag(self, challenge: str, flag: str) -> bool:
+        """Submit a flag to a challenge."""
+
+        print(f":pirate_flag: submitting flag to challenge [bold]{challenge}[/] ...")
+
+        response = await self._request(
+            "POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag, "challenge": challenge}
+        )
+
+        return bool(response.json().get("correct", False))
+
+
+def _flush_auth_on_exit(profile: str, config: ServerConfig, client: Client) -> None:
+    """Flush the authentication data to disk if it has been updated."""
+
+    if client.auth and client.auth.needs_flush:
+        print(":floppy_disk: flushing authentication data to disk ...")
+        config.access_token = client.auth.access_token.data
+        config.refresh_token = client.auth.refresh_token.data
+        UserConfig.read().set_profile_config(profile, config).write()
+
+
+async def setup_authenticated_client(profile: str, config: ServerConfig, force_refresh: bool = False) -> Client:
     """Create an API client and refresh the authentication data if it is close to expiry."""
 
     # load existing auth data
     auth = Authentication(config.access_token, config.refresh_token)
     client = Client(base_url=config.url, auth=auth)
 
-    if auth.is_expired():
+    if auth.refresh_token.is_expired():
         raise Exception("authentication expired, use [bold]dreadnode login[/] to authenticate again")
     elif force_refresh or auth.is_close_to_expiry():
         # update the auth data
@@ -237,7 +263,13 @@ async def setup_authenticated_client(config: ServerConfig, force_refresh: bool =
         # save on disk
         config.access_token = new_auth.access_token.data
         config.refresh_token = new_auth.refresh_token.data
-        # print(f"new refresh token expires at: {new_auth.refresh_token.expires_at}")
-        UserConfig.read().set_active_config(config).write()
+
+        UserConfig.read().set_profile_config(profile, config).write()
+
+    else:
+        import atexit
+
+        # save new auth on disk if it's been refreshed
+        atexit.register(lambda: _flush_auth_on_exit(profile, config, client))
 
     return client

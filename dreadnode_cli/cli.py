@@ -52,14 +52,10 @@ def login(
         if auth is None:
             raise Exception("authentication failed")
 
+        # store the authentication data for the profile
         access_token = auth.get("access_token")
         refresh_token = auth.get("refresh_token")
 
-        print()
-        print(f"[DEBUG] access_token expires in: {api.Token(access_token).expires_at}")
-        print(f"[DEBUG] refresh_token expires in: {api.Token(refresh_token).expires_at}")
-
-        # store the authentication data for the profile
         UserConfig.read().set_profile_config(
             profile,
             ServerConfig(url=server, access_token=access_token, refresh_token=refresh_token),
@@ -73,6 +69,7 @@ def login(
 @cli.command(help="Refresh the authentication data for the active server profile.")
 def refresh() -> None:
     try:
-        asyncio.run(api.setup_authenticated_client(UserConfig.read().active_server, force_refresh=True))
+        user_config = UserConfig.read()
+        asyncio.run(api.setup_authenticated_client(user_config.active, user_config.active_server, force_refresh=True))
     except Exception as e:
         print(f":cross_mark: {e}")

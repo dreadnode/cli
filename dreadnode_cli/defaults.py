@@ -17,4 +17,4 @@ DEFAULT_POLL_INTERVAL = 5
 # default maximum poll time for the authentication flow
 DEFAULT_MAX_POLL_TIME = 300
 # default maximum token TTL in seconds
-DEFAULT_TOKEN_MAX_TTL = 60 * 3
+DEFAULT_TOKEN_MAX_TTL = 60
