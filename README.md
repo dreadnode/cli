@@ -40,6 +40,12 @@ Authenticate:
 dreadnode login
 ```
 
+Authenticate to a specific server:
+
+```bash
+dreadnode login --server https://dev-crucible.dreadnode.io/
+```
+
 Manage server profiles with:
 
 ```bash
