@@ -7,69 +7,76 @@ from rich.table import Table
 from dreadnode_cli import utils
 from dreadnode_cli.api import Token
 from dreadnode_cli.config import UserConfig
+from dreadnode_cli.utils import exit_with_pretty_error
 
-cli = typer.Typer(no_args_is_help=True, help="Manage server profiles")
+cli = typer.Typer(no_args_is_help=True)
 
 
 @cli.command(help="List all server profiles")
+@exit_with_pretty_error
 def list() -> None:
-    try:
-        config = UserConfig.read()
+    print()
 
-        table = Table(box=box.ROUNDED)
-        table.add_column("Profile")
-        table.add_column("URL")
-        table.add_column("Expires At")
+    config = UserConfig.read()
+    if not config.servers:
+        print(":exclamation: No server profiles are configured")
+        return
 
-        current = config.active_server
+    table = Table(box=box.ROUNDED)
+    table.add_column("Profile")
+    table.add_column("URL")
+    table.add_column("Email")
+    table.add_column("Username")
+    table.add_column("Valid Until")
 
-        for profile, server in config.servers.items():
-            active_profile = server == current
-            refresh_token = Token(server.refresh_token)
+    for profile, server in config.servers.items():
+        active_profile = profile == config.active
+        refresh_token = Token(server.refresh_token)
 
-            table.add_row(
-                f"[bold]{profile}*[/]" if active_profile else profile,
-                server.url,
-                "[red]expired[/]"
-                if refresh_token.is_expired()
-                else f'{refresh_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} ({utils.time_to(refresh_token.expires_at)})',
-                style="cyan" if active_profile else None,
-            )
+        table.add_row(
+            f"[bold]{profile}*[/]" if active_profile else profile,
+            server.url,
+            server.email,
+            server.username,
+            "[red]expired[/]"
+            if refresh_token.is_expired()
+            else f'{refresh_token.expires_at.strftime("%Y-%m-%d %H:%M")} ({utils.time_to(refresh_token.expires_at)})',
+            style="cyan" if active_profile else None,
+        )
 
-        print(table)
-    except Exception as e:
-        print(f":cross_mark: {e}")
+    print(table)
 
 
 @cli.command(help="Set the active server profile")
+@exit_with_pretty_error
 def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")]) -> None:
-    try:
-        config = UserConfig.read()
-        if profile not in config.servers:
-            print(f":exclamation: Profile [bold]{profile}[/] is not configured")
-            return
+    print()
 
-        config.active = profile
-        config.write()
+    config = UserConfig.read()
+    if profile not in config.servers:
+        print(f":exclamation: Profile [bold]{profile}[/] does not exist")
+        return
 
-        print()
-        print(f":white_check_mark: Switched to [bold]{profile}[/]")
-        print(f"|- url:  [bold]{config.servers[profile].url}[/]")
-    except Exception as e:
-        print(f":cross_mark: {e}")
+    config.active = profile
+    config.write()
+
+    print(f":computer: Switched to [bold magenta]{profile}[/]")
+    print(f"|- email:    [bold]{config.servers[profile].email}[/]")
+    print(f"|- username: {config.servers[profile].username}")
+    print(f"|- url:      {config.servers[profile].url}")
 
 
 @cli.command(help="Remove a server profile")
+@exit_with_pretty_error
 def forget(profile: t.Annotated[str, typer.Argument(help="Profile of the server to remove")]) -> None:
-    try:
-        config = UserConfig.read()
-        if profile not in config.servers:
-            print(f":exclamation: Profile [bold]{profile}[/] is not configured")
-            return
+    print()
 
-        config.remove_profile_config(profile).write()
+    config = UserConfig.read()
+    if profile not in config.servers:
+        print(f":exclamation: Profile [bold]{profile}[/] does not exist")
+        return
 
-        print()
-        print(f":axe: Forgot about [bold]{profile}[/]")
-    except Exception as e:
-        print(f":cross_mark: {e}")
+    del config.servers[profile]
+    config.write()
+
+    print(f":axe: Forgot about [bold]{profile}[/]")

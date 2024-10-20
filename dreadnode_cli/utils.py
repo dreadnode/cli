@@ -1,11 +1,31 @@
 import base64
+import functools
 import json
 import pathlib
+import sys
 import typing as t
 from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
+from rich import print
 from rich.prompt import Prompt
+
+P = t.ParamSpec("P")
+R = t.TypeVar("R")
+
+
+def exit_with_pretty_error(func: t.Callable[P, R]) -> t.Callable[P, R]:
+    """Decorator to pretty print exceptions."""
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(f":cross_mark: {e}")
+            sys.exit(1)
+
+    return wrapper
 
 
 def time_to(future_datetime: datetime) -> str:
@@ -22,13 +42,11 @@ def time_to(future_datetime: datetime) -> str:
 
     result = []
     if days > 0:
-        result.append(f"{days} days")
+        result.append(f"{days}d")
     if hours > 0:
-        result.append(f"{hours} hours")
+        result.append(f"{hours}hr")
     if minutes > 0:
-        result.append(f"{minutes} minutes")
-    if seconds > 0:
-        result.append(f"{seconds} seconds")
+        result.append(f"{minutes}m")
 
     return ", ".join(result) if result else "Just now"
 
