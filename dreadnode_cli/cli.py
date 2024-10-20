@@ -43,9 +43,7 @@ def login(
     codes = client.get_device_codes()
 
     # present verification URL to user
-    user_code = codes["user_code"]
-    device_code = codes["device_code"]
-    verification_url = client.url_for_user_code(user_code)
+    verification_url = client.url_for_user_code(codes.user_code)
     verification_url_base = verification_url.split("?")[0]
 
     print()
@@ -56,33 +54,31 @@ If the browser does not open or you wish to use a different device, open the fol
 
 :link: [bold]{verification_url_base}[/]
 
-Then enter the code: [bold]{user_code}[/]
+Then enter the code: [bold]{codes.user_code}[/]
 """
     )
 
     webbrowser.open(verification_url)
 
     # poll for the access token after user verification
-    tokens = client.poll_for_token(device_code)
+    tokens = client.poll_for_token(codes.device_code)
 
-    refresh_token = tokens["refresh_token"]
-    access_token = tokens["access_token"]
-
-    client = api.Client(server, cookies={"refresh_token": refresh_token, "access_token": access_token})
+    client = api.Client(server, cookies={"refresh_token": tokens.refresh_token, "access_token": tokens.access_token})
     user = client.get_user()
 
     UserConfig.read().set_server_config(
         ServerConfig(
             url=server,
-            access_token=tokens["access_token"],
-            refresh_token=tokens["refresh_token"],
-            email=user["email_address"],
-            username=user["username"],
+            access_token=tokens.access_token,
+            refresh_token=tokens.refresh_token,
+            email=user.email_address,
+            username=user.username,
+            api_key=user.api_key.key,
         ),
         profile,
     ).write()
 
-    print(f":white_check_mark: Authenticated as {user['email_address']} ({user['username']})")
+    print(f":white_check_mark: Authenticated as {user.email_address} ({user.username})")
 
 
 @cli.command(help="Refresh data for the active server profile.")
@@ -96,9 +92,10 @@ def refresh() -> None:
     client = api.client()
     user = client.get_user()
 
-    server_config.email = user["email_address"]
-    server_config.username = user["username"]
+    server_config.email = user.email_address
+    server_config.username = user.username
+    server_config.api_key = user.api_key.key
 
     user_config.set_server_config(server_config).write()
 
-    print(f":white_check_mark: Updated user: [bold]{user['email_address']} ({user['username']})[/]")
+    print(f":white_check_mark: Refreshed [bold]{user.email_address} ({user.username})[/]")

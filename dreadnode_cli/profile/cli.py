@@ -23,25 +23,25 @@ def list() -> None:
         return
 
     table = Table(box=box.ROUNDED)
-    table.add_column("Profile")
-    table.add_column("URL")
+    table.add_column("Profile", style="magenta")
+    table.add_column("URL", style="cyan")
     table.add_column("Email")
     table.add_column("Username")
     table.add_column("Valid Until")
 
     for profile, server in config.servers.items():
-        active_profile = profile == config.active
+        active = profile == config.active
         refresh_token = Token(server.refresh_token)
 
         table.add_row(
-            f"[bold]{profile}*[/]" if active_profile else profile,
+            profile + ("*" if active else ""),
             server.url,
             server.email,
             server.username,
             "[red]expired[/]"
             if refresh_token.is_expired()
             else f'{refresh_token.expires_at.strftime("%Y-%m-%d %H:%M")} ({utils.time_to(refresh_token.expires_at)})',
-            style="cyan" if active_profile else None,
+            style="bold" if active else None,
         )
 
     print(table)

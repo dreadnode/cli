@@ -37,12 +37,12 @@ def list() -> None:
 
     for challenge in challenges:
         table.add_row(
-            f"[bold]{challenge['title']}[/]",
-            ":white_check_mark:" if challenge["status"] == "completed" else "",
-            f"[dim]{challenge['lead']}[/]",
-            format_difficulty(challenge["difficulty"]),
-            ", ".join(challenge["authors"]),
-            ", ".join(challenge["tags"]),
+            f"[bold]{challenge.title}[/]",
+            ":white_check_mark:" if challenge.status == "completed" else "",
+            f"[dim]{challenge.lead}[/]",
+            format_difficulty(challenge.difficulty),
+            ", ".join(challenge.authors),
+            ", ".join(challenge.tags),
         )
 
     print(table)

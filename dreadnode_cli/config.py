@@ -4,8 +4,6 @@ from ruamel.yaml import YAML
 
 from dreadnode_cli.defaults import DEFAULT_PROFILE_NAME, USER_CONFIG_PATH
 
-yaml = YAML()
-
 
 class ServerConfig(pydantic.BaseModel):
     """Server specific authentication data and API URL."""
@@ -13,6 +11,7 @@ class ServerConfig(pydantic.BaseModel):
     url: str
     email: str
     username: str
+    api_key: str
     access_token: str
     refresh_token: str
 
@@ -37,7 +36,7 @@ class UserConfig(pydantic.BaseModel):
             return cls()
 
         with USER_CONFIG_PATH.open("r") as f:
-            return cls.model_validate(yaml.load(f))
+            return cls.model_validate(YAML().load(f))
 
     def write(self) -> None:
         """Write the user configuration to the file system."""
@@ -49,7 +48,7 @@ class UserConfig(pydantic.BaseModel):
             USER_CONFIG_PATH.parent.mkdir(parents=True)
 
         with USER_CONFIG_PATH.open("w") as f:
-            yaml.dump(self.model_dump(), f)
+            YAML().dump(self.model_dump(mode="json"), f)
 
     def get_server_config(self, profile: str | None = None) -> ServerConfig:
         """Get the server configuration for the given profile or None if not set."""

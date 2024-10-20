@@ -13,7 +13,7 @@ async def main() -> None:
 
     chat = (
         await
-        rg.get_generator('openapi/model,base_url=http://dropship/v1')
+        rg.get_generator('openai/model,api_base=http://dropship/v1')
         .chat('Say Hello!')
         .run()
     )

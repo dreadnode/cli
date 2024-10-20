@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import httpx
+from pydantic import BaseModel
 from rich import print
 
 from dreadnode_cli import __version__, utils
@@ -97,21 +98,23 @@ class Client:
         self,
         method: str,
         path: str,
-        json_data: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json_data: dict[str, t.Any] | None = None,
     ) -> httpx.Response:
         """Make a raw request to the API."""
 
-        return self._client.request(method, path, json=json_data)
+        return self._client.request(method, path, json=json_data, params=query_params)
 
     def request(
         self,
         method: str,
         path: str,
-        json_data: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json_data: dict[str, t.Any] | None = None,
     ) -> httpx.Response:
         """Make a request to the API. Raise an exception for non-200 status codes."""
 
-        response = self._request(method, path, json_data)
+        response = self._request(method, path, query_params, json_data)
 
         if response.status_code == 401:
             raise Exception("Authentication expired, use [bold]dreadnode login[/]")
@@ -122,12 +125,14 @@ class Client:
         except httpx.HTTPStatusError as e:
             raise Exception(self._get_error_message(response)) from e
 
+    # Auth
+
     def url_for_user_code(self, user_code: str) -> str:
         """Get the URL to verify the user code."""
 
         return f"{self._base_url}/account/device?code={user_code}"
 
-    class DeviceCodeResponse(t.TypedDict):
+    class DeviceCodeResponse(BaseModel):
         id: UUID
         completed: bool
         device_code: str
@@ -140,9 +145,9 @@ class Client:
         """Start the authentication flow by requesting user and device codes."""
 
         response = self.request("POST", "/api/auth/device/code")
-        return t.cast(Client.DeviceCodeResponse, response.json())
+        return Client.DeviceCodeResponse(**response.json())
 
-    class AccessRefreshTokenResponse(t.TypedDict):
+    class AccessRefreshTokenResponse(BaseModel):
         access_token: str
         refresh_token: str
 
@@ -156,7 +161,7 @@ class Client:
             response = self._request("POST", "/api/auth/device/token", json_data={"device_code": device_code})
 
             if response.status_code == 200:
-                return t.cast(Client.AccessRefreshTokenResponse, response.json())
+                return Client.AccessRefreshTokenResponse(**response.json())
             elif response.status_code != 401:
                 raise Exception(self._get_error_message(response))
 
@@ -166,20 +171,24 @@ class Client:
 
     # User
 
-    class UserResponse(t.TypedDict):
+    class UserAPIKeyResponse(BaseModel):
+        key: str
+
+    class UserResponse(BaseModel):
         id: UUID
         email_address: str
         username: str
+        api_key: "Client.UserAPIKeyResponse"
 
     def get_user(self) -> UserResponse:
         """Get the user email and username."""
 
         response = self.request("GET", "/api/user")
-        return t.cast(Client.UserResponse, response.json())
+        return Client.UserResponse(**response.json())
 
     # Challenges
 
-    class ChallengeResponse(t.TypedDict):
+    class ChallengeResponse(BaseModel):
         authors: list[str]
         difficulty: str
         key: str
@@ -193,7 +202,7 @@ class Client:
         """List all challenges."""
 
         response = self.request("GET", "/api/challenges")
-        return t.cast(list[Client.ChallengeResponse], response.json())
+        return [Client.ChallengeResponse(**challenge) for challenge in response.json()]
 
     def get_challenge_artifact(self, challenge: str, artifact_name: str) -> bytes:
         """Get a challenge artifact."""
@@ -209,6 +218,113 @@ class Client:
         response = self.request("POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag})
 
         return bool(response.json().get("correct", False))
+
+    # Strikes
+
+    class StrikeZone(BaseModel):
+        key: str
+        name: str
+        description: str | None
+
+    class StrikeResponse(BaseModel):
+        id: UUID
+        key: str
+        competitive: bool
+        type: str
+        name: str
+        description: str | None
+        zones: list["Client.StrikeZone"]
+
+    def get_strike(self, strike: str) -> StrikeResponse:
+        response = self.request("GET", f"/api/strikes/{strike}")
+        return Client.StrikeResponse(**response.json())
+
+    def list_strikes(self) -> list[StrikeResponse]:
+        response = self.request("GET", "/api/strikes")
+        return [Client.StrikeResponse(**strike) for strike in response.json()]
+
+    # Agent
+
+    class Container(BaseModel):
+        image: str
+        env: dict[str, str]
+        name: str | None
+
+    class StrikeAgentVersion(BaseModel):
+        id: UUID
+        status: str
+        created_at: datetime
+        notes: str | None
+        container: "Client.Container"
+
+    class StrikeAgentResponse(BaseModel):
+        id: UUID
+        user_id: UUID
+        strike_id: UUID | None
+        key: str
+        name: str | None
+        created_at: datetime
+        versions: list["Client.StrikeAgentVersion"]
+        latest: "Client.StrikeAgentVersion"
+        revision: int
+
+    class StrikeAgentSummaryResponse(BaseModel):
+        id: UUID
+        user_id: UUID
+        strike_id: UUID | None
+        key: str
+        name: str | None
+        created_at: datetime
+        revision: int
+        latest: "Client.StrikeAgentVersion"
+
+    def list_agents(self, strike_id: UUID | None = None) -> list[StrikeAgentSummaryResponse]:
+        response = self.request(
+            "GET",
+            "/api/strikes/agents",
+            query_params={"strike_id": str(strike_id)} if strike_id else None,
+        )
+        return [Client.StrikeAgentSummaryResponse(**agent) for agent in response.json()]
+
+    def get_agent(self, agent: str) -> StrikeAgentResponse:
+        response = self.request("GET", f"/api/strikes/agents/{agent}")
+        return Client.StrikeAgentResponse(**response.json())
+
+    def create_agent(
+        self, container: Container, name: str, strike: str | None = None, notes: str | None = None
+    ) -> StrikeAgentResponse:
+        response = self.request(
+            "POST",
+            "/api/strikes/agents",
+            json_data={
+                "container": container.model_dump(mode="json"),
+                "strike": strike,
+                "name": name,
+                "notes": notes,
+            },
+        )
+        return Client.StrikeAgentResponse(**response.json())
+
+    def update_agent(self, agent: str, name: str) -> StrikeAgentResponse:
+        response = self.request("PATCH", f"/api/strikes/agents/{agent}", json_data={"name": name})
+        return Client.StrikeAgentResponse(**response.json())
+
+    def create_agent_version(self, agent: str, container: Container, notes: str | None = None) -> StrikeAgentResponse:
+        response = self.request(
+            "POST",
+            f"/api/strikes/agents/{agent}/versions",
+            json_data={
+                "container": container.model_dump(mode="json"),
+                "notes": notes,
+            },
+        )
+        return Client.StrikeAgentResponse(**response.json())
+
+    # Runs
+
+    def start_run(self, agent_version_id: UUID) -> t.Any:
+        response = self.request("POST", "/api/strikes/runs", json_data={"agent_version_id": str(agent_version_id)})
+        return response.json()
 
 
 def client(*, profile: str | None = None) -> Client:

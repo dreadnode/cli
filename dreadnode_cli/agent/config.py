@@ -1,27 +1,40 @@
 import pathlib
-import typing as t
+from uuid import UUID
 
 import pydantic
 from ruamel.yaml import YAML
 
-default_config_path = pathlib.Path(".dreadnode.yaml")
-
-yaml = YAML(typ="safe", pure=True)
+AGENT_CONFIG_FILENAME = ".dreadnode.yaml"
 
 
 class AgentConfig(pydantic.BaseModel):
     name: str
-    agents: list[str] = []
+    strike: str | None = None
+    active: UUID | None = None
+    links: list[UUID] = []
+
+    def _update_active(self) -> None:
+        if self.active not in self.links:
+            self.active = next(iter(self.links), None)
 
     @classmethod
-    def read(cls, *, path: pathlib.Path | None = None) -> t.Optional["AgentConfig"]:
-        path = path or default_config_path
+    def read(cls, directory: pathlib.Path = pathlib.Path(".")) -> "AgentConfig":
+        path = directory / AGENT_CONFIG_FILENAME
         if not path.exists():
-            return None
+            raise Exception(f"{path} does not exist")
 
         with path.open("r") as f:
-            return cls.model_validate(yaml.load(f))
+            return cls.model_validate(YAML().load(f))
 
-    def write(self, *, path: pathlib.Path | None = None) -> None:
-        with (path or default_config_path).open("w") as f:
-            yaml.dump(self.model_dump(), f)
+    def write(self, directory: pathlib.Path = pathlib.Path(".")) -> None:
+        self._update_active()
+        with (directory / AGENT_CONFIG_FILENAME).open("w") as f:
+            YAML().dump(self.model_dump(mode="json"), f)
+
+    def add_link(self, id: UUID) -> "AgentConfig":
+        self.links.append(id)
+        return self
+
+    def remove_link(self, id: UUID) -> "AgentConfig":
+        self.links.remove(id)
+        return self
