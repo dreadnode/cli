@@ -5,7 +5,7 @@ Dreadnode command line interface.
 ### With Poetry:
 
 ```bash
-poetry install 
+poetry install
 ```
 
 Then enter the poetry shell:
@@ -43,7 +43,7 @@ dreadnode login
 Authenticate to a specific server:
 
 ```bash
-dreadnode login --server https://dev-crucible.dreadnode.io/
+dreadnode login --server https://dev-crucible.dreadnode.io
 ```
 
 Manage server profiles with:
@@ -71,5 +71,3 @@ dreadnode challenge artifact <challenge_id> <artifact_name> -o <output_path>
 # submit a flag
 dreadnode challenge submit-flag <challenge_id> 'gAAAAA...'
 ```
-
-

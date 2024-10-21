@@ -10,11 +10,13 @@ client = docker.from_env()
 
 
 def get_registry(config: ServerConfig) -> str:
-    if config.url == "https://crucible.dreadnode.io":
+    if config.url.startswith("https://crucible.dreadnode.io"):
         return "registry.dreadnode.io"
-    elif config.url == "https://staging-crucible.dreadnode.io":
+    elif config.url.startswith("https://staging-crucible.dreadnode.io"):
         return "staging-registry.dreadnode.io"
-    elif config.url == "https://dev-crucible.dreadnode.io":
+    elif config.url.startswith("https://dev-crucible.dreadnode.io"):
+        return "dev-registry.dreadnode.io"
+    elif config.url.startswith("https://dev-crucible.dreadnode.io"):
         return "dev-registry.dreadnode.io"
     elif "localhost" in config.url:
         return "localhost:5000"
