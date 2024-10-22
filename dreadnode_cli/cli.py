@@ -22,14 +22,15 @@ cli.add_typer(agent_cli, name="agent", help="Interact with Strike agents")
 @cli.command(help="Authenticate to the platform.")
 @pretty_cli
 def login(
-    server: t.Annotated[str, typer.Option("--server", "-s", help="URL of the server")] = PLATFORM_BASE_URL,
+    server: t.Annotated[str | None, typer.Option("--server", "-s", help="URL of the server")] = None,
     profile: t.Annotated[str | None, typer.Option("--profile", "-p", help="Profile alias to assign / update")] = None,
 ) -> None:
-    try:
-        existing_config = UserConfig.read().get_server_config(profile)
-        server = existing_config.url
-    except Exception:
-        pass
+    if not server:
+        try:
+            existing_config = UserConfig.read().get_server_config(profile)
+            server = existing_config.url
+        except Exception:
+            server = PLATFORM_BASE_URL
 
     # create client with no auth data
     client = api.Client(base_url=server)
