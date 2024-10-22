@@ -6,7 +6,7 @@ from rich import box, print
 from rich.table import Table
 
 import dreadnode_cli.api as api
-from dreadnode_cli.utils import exit_with_pretty_error
+from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -22,10 +22,9 @@ def format_difficulty(difficulty: str) -> str:
 
 # TODO: add sorting and filtering
 @cli.command(help="List challenges")
-@exit_with_pretty_error
+@pretty_cli
 def list() -> None:
-    client = api.client()
-    challenges = client.list_challenges()
+    challenges = api.client().list_challenges()
 
     table = Table(box=box.ROUNDED)
     table.add_column("Title")
@@ -49,7 +48,7 @@ def list() -> None:
 
 
 @cli.command(help="Download a challenge artifact.")
-@exit_with_pretty_error
+@pretty_cli
 def artifact(
     challenge_id: t.Annotated[str, typer.Argument(help="Challenge name")],
     artifact_name: t.Annotated[str, typer.Argument(help="Artifact name")],
@@ -60,8 +59,7 @@ def artifact(
         ),
     ] = pathlib.Path("."),
 ) -> None:
-    client = api.client()
-    content = client.get_challenge_artifact(challenge_id, artifact_name)
+    content = api.client().get_challenge_artifact(challenge_id, artifact_name)
     file_path = output_path / artifact_name
     file_path.write_bytes(content)
 
@@ -69,15 +67,16 @@ def artifact(
 
 
 @cli.command(help="Submit a flag to a challenge")
-@exit_with_pretty_error
+@pretty_cli
 def submit_flag(
-    challenge_id: t.Annotated[str, typer.Argument(help="Challenge name")],
+    challenge: t.Annotated[str, typer.Argument(help="Challenge name")],
     flag: t.Annotated[str, typer.Argument(help="Challenge flag")],
 ) -> None:
-    client = api.client()
-    correct = client.submit_challenge_flag(challenge_id, flag)
+    print(f":pirate_flag: submitting flag to challenge [bold]{challenge}[/] ...")
+
+    correct = api.client().submit_challenge_flag(challenge, flag)
 
     if correct:
-        print(":white_check_mark: The flag was correct. Congrats!")
+        print(":tada: The flag was correct. Congrats!")
     else:
         print(":cross_mark: The flag was incorrect. Keep trying!")

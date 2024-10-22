@@ -27,6 +27,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 dreadnode = 'dreadnode_cli.__main__:run'
+dn = 'dreadnode_cli.__main__:run'
 
 [tool.poetry.plugins."pipx.run"]
 dreadnode-cli = 'dreadnode_cli.__main__:run'

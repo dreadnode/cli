@@ -145,7 +145,7 @@ class Client:
         """Start the authentication flow by requesting user and device codes."""
 
         response = self.request("POST", "/api/auth/device/code")
-        return Client.DeviceCodeResponse(**response.json())
+        return self.DeviceCodeResponse(**response.json())
 
     class AccessRefreshTokenResponse(BaseModel):
         access_token: str
@@ -161,7 +161,7 @@ class Client:
             response = self._request("POST", "/api/auth/device/token", json_data={"device_code": device_code})
 
             if response.status_code == 200:
-                return Client.AccessRefreshTokenResponse(**response.json())
+                return self.AccessRefreshTokenResponse(**response.json())
             elif response.status_code != 401:
                 raise Exception(self._get_error_message(response))
 
@@ -184,7 +184,7 @@ class Client:
         """Get the user email and username."""
 
         response = self.request("GET", "/api/user")
-        return Client.UserResponse(**response.json())
+        return self.UserResponse(**response.json())
 
     # Challenges
 
@@ -202,7 +202,7 @@ class Client:
         """List all challenges."""
 
         response = self.request("GET", "/api/challenges")
-        return [Client.ChallengeResponse(**challenge) for challenge in response.json()]
+        return [self.ChallengeResponse(**challenge) for challenge in response.json()]
 
     def get_challenge_artifact(self, challenge: str, artifact_name: str) -> bytes:
         """Get a challenge artifact."""
@@ -213,37 +213,34 @@ class Client:
     def submit_challenge_flag(self, challenge: str, flag: str) -> bool:
         """Submit a flag to a challenge."""
 
-        print(f":pirate_flag: submitting flag to challenge [bold]{challenge}[/] ...")
-
         response = self.request("POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag})
-
         return bool(response.json().get("correct", False))
 
     # Strikes
+
+    StrikeRunStatus = t.Literal["pending", "deploying", "running", "completed", "timeout", "failed"]
+
+    class StrikeModel(BaseModel):
+        key: str
+        name: str
+        provider: str
 
     class StrikeZone(BaseModel):
         key: str
         name: str
         description: str | None
 
-    class StrikeResponse(BaseModel):
+    class StrikeSummaryResponse(BaseModel):
         id: UUID
         key: str
         competitive: bool
+        models: list["Client.StrikeModel"]
         type: str
         name: str
         description: str | None
+
+    class StrikeResponse(StrikeSummaryResponse):
         zones: list["Client.StrikeZone"]
-
-    def get_strike(self, strike: str) -> StrikeResponse:
-        response = self.request("GET", f"/api/strikes/{strike}")
-        return Client.StrikeResponse(**response.json())
-
-    def list_strikes(self) -> list[StrikeResponse]:
-        response = self.request("GET", "/api/strikes")
-        return [Client.StrikeResponse(**strike) for strike in response.json()]
-
-    # Agent
 
     class Container(BaseModel):
         image: str
@@ -252,7 +249,6 @@ class Client:
 
     class StrikeAgentVersion(BaseModel):
         id: UUID
-        status: str
         created_at: datetime
         notes: str | None
         container: "Client.Container"
@@ -264,6 +260,7 @@ class Client:
         key: str
         name: str | None
         created_at: datetime
+        last_run_status: t.Optional["Client.StrikeRunStatus"]
         versions: list["Client.StrikeAgentVersion"]
         latest: "Client.StrikeAgentVersion"
         revision: int
@@ -275,22 +272,70 @@ class Client:
         key: str
         name: str | None
         created_at: datetime
+        last_run_status: t.Optional["Client.StrikeRunStatus"]
         revision: int
         latest: "Client.StrikeAgentVersion"
 
-    def list_agents(self, strike_id: UUID | None = None) -> list[StrikeAgentSummaryResponse]:
+    class StrikeRunOutputScore(BaseModel):
+        value: int | float | bool
+        explanation: str | None = None
+        metadata: dict[str, t.Any] = {}
+
+    class StrikeRunOutput(BaseModel):
+        data: dict[str, t.Any]
+        score: t.Optional["Client.StrikeRunOutputScore"] = None
+        metadata: dict[str, t.Any] = {}
+
+    class StrikeRunZone(BaseModel):
+        id: UUID
+        key: str
+        status: "Client.StrikeRunStatus"
+        start: datetime | None
+        end: datetime | None
+        agent_logs: str | None
+        container_logs: dict[str, str]
+        outputs: list["Client.StrikeRunOutput"]
+        inferences: list[dict[str, t.Any]]
+
+    class StrikeRunSummaryResponse(BaseModel):
+        id: UUID
+        strike_id: UUID
+        strike_key: str
+        strike_name: str
+        strike_type: str
+        strike_description: str | None
+        agent_id: UUID
+        agent_key: str
+        agent_revision: int
+        agent_version: "Client.StrikeAgentVersion"
+        status: "Client.StrikeRunStatus"
+        start: datetime | None
+        end: datetime | None
+
+    class StrikeRunResponse(StrikeRunSummaryResponse):
+        zones: list["Client.StrikeRunZone"]
+
+    def get_strike(self, strike: str) -> StrikeResponse:
+        response = self.request("GET", f"/api/strikes/{strike}")
+        return self.StrikeResponse(**response.json())
+
+    def list_strikes(self) -> list[StrikeSummaryResponse]:
+        response = self.request("GET", "/api/strikes")
+        return [self.StrikeResponse(**strike) for strike in response.json()]
+
+    def list_strike_agents(self, strike_id: UUID | None = None) -> list[StrikeAgentSummaryResponse]:
         response = self.request(
             "GET",
             "/api/strikes/agents",
             query_params={"strike_id": str(strike_id)} if strike_id else None,
         )
-        return [Client.StrikeAgentSummaryResponse(**agent) for agent in response.json()]
+        return [self.StrikeAgentSummaryResponse(**agent) for agent in response.json()]
 
-    def get_agent(self, agent: str) -> StrikeAgentResponse:
+    def get_strike_agent(self, agent: UUID | str) -> StrikeAgentResponse:
         response = self.request("GET", f"/api/strikes/agents/{agent}")
-        return Client.StrikeAgentResponse(**response.json())
+        return self.StrikeAgentResponse(**response.json())
 
-    def create_agent(
+    def create_strike_agent(
         self, container: Container, name: str, strike: str | None = None, notes: str | None = None
     ) -> StrikeAgentResponse:
         response = self.request(
@@ -303,13 +348,15 @@ class Client:
                 "notes": notes,
             },
         )
-        return Client.StrikeAgentResponse(**response.json())
+        return self.StrikeAgentResponse(**response.json())
 
-    def update_agent(self, agent: str, name: str) -> StrikeAgentResponse:
+    def update_strike_agent(self, agent: str, name: str) -> StrikeAgentResponse:
         response = self.request("PATCH", f"/api/strikes/agents/{agent}", json_data={"name": name})
-        return Client.StrikeAgentResponse(**response.json())
+        return self.StrikeAgentResponse(**response.json())
 
-    def create_agent_version(self, agent: str, container: Container, notes: str | None = None) -> StrikeAgentResponse:
+    def create_strike_agent_version(
+        self, agent: str, container: Container, notes: str | None = None
+    ) -> StrikeAgentResponse:
         response = self.request(
             "POST",
             f"/api/strikes/agents/{agent}/versions",
@@ -318,13 +365,31 @@ class Client:
                 "notes": notes,
             },
         )
-        return Client.StrikeAgentResponse(**response.json())
+        return self.StrikeAgentResponse(**response.json())
 
-    # Runs
+    def start_strike_run(
+        self, agent_version_id: UUID, *, model: str | None = None, strike: UUID | str | None = None
+    ) -> StrikeRunResponse:
+        response = self.request(
+            "POST",
+            "/api/strikes/runs",
+            json_data={
+                "agent_version_id": str(agent_version_id),
+                "model": model,
+                "strike": str(strike) if strike else None,
+            },
+        )
+        return self.StrikeRunResponse(**response.json())
 
-    def start_run(self, agent_version_id: UUID) -> t.Any:
-        response = self.request("POST", "/api/strikes/runs", json_data={"agent_version_id": str(agent_version_id)})
-        return response.json()
+    def get_strike_run(self, run: UUID | str) -> StrikeRunResponse:
+        response = self.request("GET", f"/api/strikes/runs/{run}")
+        return self.StrikeRunResponse(**response.json())
+
+    def list_strike_runs(self, *, strike_id: UUID | str | None = None) -> list[StrikeRunSummaryResponse]:
+        response = self.request(
+            "GET", "/api/strikes/runs", query_params={"strike_id": str(strike_id)} if strike_id else None
+        )
+        return [self.StrikeRunSummaryResponse(**run) for run in response.json()]
 
 
 def client(*, profile: str | None = None) -> Client:

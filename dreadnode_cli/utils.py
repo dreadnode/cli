@@ -10,19 +10,25 @@ from jinja2 import Environment, FileSystemLoader
 from rich import print
 from rich.prompt import Prompt
 
+from dreadnode_cli.defaults import DEBUG
+
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
 
 
-def exit_with_pretty_error(func: t.Callable[P, R]) -> t.Callable[P, R]:
-    """Decorator to pretty print exceptions."""
+def pretty_cli(func: t.Callable[P, R]) -> t.Callable[P, R]:
+    """Decorator to pad function output and catch/pretty print any exceptions."""
 
     @functools.wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
+            print()
             return func(*args, **kwargs)
         except Exception as e:
-            print(f":cross_mark: {e}")
+            if DEBUG:
+                raise
+
+            print(f":exclamation: {e}")
             sys.exit(1)
 
     return wrapper

@@ -10,7 +10,7 @@ from dreadnode_cli.challenge import cli as challenge_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import PLATFORM_BASE_URL
 from dreadnode_cli.profile import cli as profile_cli
-from dreadnode_cli.utils import exit_with_pretty_error
+from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True, help="Interact with the Dreadnode platform")
 
@@ -20,20 +20,17 @@ cli.add_typer(agent_cli, name="agent", help="Interact with Strike agents")
 
 
 @cli.command(help="Authenticate to the platform.")
-@exit_with_pretty_error
+@pretty_cli
 def login(
     server: t.Annotated[str, typer.Option("--server", "-s", help="URL of the server")] = PLATFORM_BASE_URL,
     profile: t.Annotated[str | None, typer.Option("--profile", "-p", help="Profile alias to assign / update")] = None,
 ) -> None:
-    print()
-
     try:
         existing_config = UserConfig.read().get_server_config(profile)
         server = existing_config.url
     except Exception:
         pass
 
-    # allow overriding the server via env variable
     # create client with no auth data
     client = api.Client(base_url=server)
 
@@ -82,10 +79,8 @@ Then enter the code: [bold]{codes.user_code}[/]
 
 
 @cli.command(help="Refresh data for the active server profile.")
-@exit_with_pretty_error
+@pretty_cli
 def refresh() -> None:
-    print()
-
     user_config = UserConfig.read()
     server_config = user_config.get_server_config()
 
@@ -98,4 +93,6 @@ def refresh() -> None:
 
     user_config.set_server_config(server_config).write()
 
-    print(f":white_check_mark: Refreshed [bold]{user.email_address} ({user.username})[/]")
+    print(
+        f":white_check_mark: Refreshed '[bold]{user_config.active}[/bold]' ([magenta]{user.email_address}[/] / [cyan]{user.username}[/])"
+    )

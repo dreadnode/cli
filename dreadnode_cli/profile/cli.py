@@ -7,16 +7,14 @@ from rich.table import Table
 from dreadnode_cli import utils
 from dreadnode_cli.api import Token
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import exit_with_pretty_error
+from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
 
 
 @cli.command(help="List all server profiles")
-@exit_with_pretty_error
+@pretty_cli
 def list() -> None:
-    print()
-
     config = UserConfig.read()
     if not config.servers:
         print(":exclamation: No server profiles are configured")
@@ -40,7 +38,7 @@ def list() -> None:
             server.username,
             "[red]expired[/]"
             if refresh_token.is_expired()
-            else f'{refresh_token.expires_at.strftime("%Y-%m-%d %H:%M")} ({utils.time_to(refresh_token.expires_at)})',
+            else f'{refresh_token.expires_at.astimezone().strftime("%c")} ({utils.time_to(refresh_token.expires_at)})',
             style="bold" if active else None,
         )
 
@@ -48,10 +46,8 @@ def list() -> None:
 
 
 @cli.command(help="Set the active server profile")
-@exit_with_pretty_error
+@pretty_cli
 def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")]) -> None:
-    print()
-
     config = UserConfig.read()
     if profile not in config.servers:
         print(f":exclamation: Profile [bold]{profile}[/] does not exist")
@@ -60,17 +56,15 @@ def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")
     config.active = profile
     config.write()
 
-    print(f":computer: Switched to [bold magenta]{profile}[/]")
+    print(f":laptop_computer: Switched to [bold magenta]{profile}[/]")
     print(f"|- email:    [bold]{config.servers[profile].email}[/]")
     print(f"|- username: {config.servers[profile].username}")
     print(f"|- url:      {config.servers[profile].url}")
 
 
 @cli.command(help="Remove a server profile")
-@exit_with_pretty_error
+@pretty_cli
 def forget(profile: t.Annotated[str, typer.Argument(help="Profile of the server to remove")]) -> None:
-    print()
-
     config = UserConfig.read()
     if profile not in config.servers:
         print(f":exclamation: Profile [bold]{profile}[/] does not exist")
