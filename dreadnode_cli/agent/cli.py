@@ -172,7 +172,7 @@ def deploy(
             print(format_models(strike_response.models))
             raise Exception(f"Model '{model}' not found in strike '{strike_response.name}'")
 
-    run = client.start_strike_run(agent.latest.id, strike=strike, model=model)
+    run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model)
     agent_config.add_run(run.id).write(directory)
     formatted = format_run(run)
 

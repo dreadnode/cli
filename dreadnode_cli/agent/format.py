@@ -126,7 +126,7 @@ def format_agent(agent: api.Client.StrikeAgentResponse) -> RenderableType:
     table.add_row("key", f"[magenta]{agent.key}[/]")
     table.add_row("name", f"[magenta]{agent.name or '-'}[/]")
     table.add_row("revision", f"[yellow]{agent.revision}[/]")
-    table.add_row("last status", Text(agent.last_run_status or "-", style=get_status_style(agent.last_run_status)))
+    table.add_row("last status", Text(agent.latest_run_status or "-", style=get_status_style(agent.latest_run_status)))
     table.add_row("created", f"[cyan]{agent.created_at.astimezone().strftime('%c')}[/]")
     table.add_row("", "")
 
@@ -134,9 +134,9 @@ def format_agent(agent: api.Client.StrikeAgentResponse) -> RenderableType:
     latest_table.add_column("Property", justify="right")
     latest_table.add_column("Value")
 
-    latest_table.add_row("id", f"[dim]{agent.latest.id}[/]")
-    latest_table.add_row("created", f"[cyan]{agent.latest.created_at.astimezone().strftime('%c')}[/]")
-    latest_table.add_row("notes", agent.latest.notes or "-")
+    latest_table.add_row("id", f"[dim]{agent.latest_version.id}[/]")
+    latest_table.add_row("created", f"[cyan]{agent.latest_version.created_at.astimezone().strftime('%c')}[/]")
+    latest_table.add_row("notes", agent.latest_version.notes or "-")
 
     table.add_row("latest", latest_table)
 
@@ -151,7 +151,7 @@ def format_agent_versions(agent: api.Client.StrikeAgentResponse) -> RenderableTy
     table.add_column("created")
 
     for i, version in enumerate(sorted(agent.versions, key=lambda v: v.created_at)):
-        latest = version.id == agent.latest.id
+        latest = version.id == agent.latest_version.id
         table.add_row(
             str(i + 1) + ("*" if latest else ""),
             version.notes or "-",
