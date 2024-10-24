@@ -31,8 +31,9 @@ def get_model_provider_style(provider: str) -> str:
     return {
         "OpenAI": "spring_green4",
         "Hugging Face": "blue",
-        "Dreadnode": "magenta",
+        "Dreadnode (private)": "magenta",
         "Anthropic": "tan",
+        "Google": "cyan",
         "MistralAI": "orange_red1",
         "Groq": "red",
     }.get(provider, "")
@@ -47,8 +48,12 @@ def pretty_container_logs(logs: str) -> str:
 
 
 def format_duration(start: datetime | None, end: datetime | None) -> str:
-    if not (start and end):
+    start = start.astimezone() if start else None
+    end = (end or datetime.now()).astimezone()
+
+    if not start:
         return "..."
+
     return f"{(end - start).total_seconds():.1f}s"
 
 
@@ -68,26 +73,6 @@ def format_models(models: list[api.Client.StrikeModel]) -> RenderableType:
             Text(model.key),
             Text(model.name, style=f"bold {provider_style}"),
             Text(model.provider, style=provider_style),
-        )
-
-    return table
-
-
-def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableType:
-    table = Table(box=box.ROUNDED)
-    table.add_column("id", style="dim")
-    table.add_column("agent")
-    table.add_column("status")
-    table.add_column("started")
-    table.add_column("duration")
-
-    for run in runs:
-        table.add_row(
-            str(run.id),
-            f"[bold magenta]{run.agent_key}[/] [dim]:[/] [yellow]{run.agent_revision}[/]",
-            Text(run.status, style="bold " + get_status_style(run.status)),
-            format_time(run.start),
-            Text(format_duration(run.start, run.end), style="bold cyan"),
         )
 
     return table
@@ -230,7 +215,7 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
             )
             sub_components.append(outputs_panel)
 
-        if zone.agent_logs:
+        if include_logs and zone.agent_logs:
             agent_log_panel = Panel(
                 pretty_container_logs(zone.agent_logs),
                 title="[dim]logs:[/] [bold]agent[/]",
@@ -286,3 +271,25 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
     ]
 
     return Panel(Group(*components), title=f"[bold]run [dim]{run.id}[/]", title_align="left", border_style="blue")
+
+
+def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableType:
+    table = Table(box=box.ROUNDED)
+    table.add_column("id", style="dim")
+    table.add_column("agent")
+    table.add_column("status")
+    table.add_column("model")
+    table.add_column("started")
+    table.add_column("duration")
+
+    for run in runs:
+        table.add_row(
+            str(run.id),
+            f"[bold magenta]{run.agent_key}[/] [dim]:[/] [yellow]{run.agent_revision}[/]",
+            Text(run.status, style="bold " + get_status_style(run.status)),
+            Text(run.model or "-"),
+            format_time(run.start),
+            Text(format_duration(run.start, run.end), style="bold cyan"),
+        )
+
+    return table

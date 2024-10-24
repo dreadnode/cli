@@ -261,9 +261,9 @@ class Client:
         name: str | None
         created_at: datetime
         latest_run_status: t.Optional["Client.StrikeRunStatus"]
+        latest_run_id: UUID | None
         versions: list["Client.StrikeAgentVersion"]
         latest_version: "Client.StrikeAgentVersion"
-        latest_run_id: UUID | None
         revision: int
 
     class StrikeAgentSummaryResponse(BaseModel):
@@ -274,8 +274,8 @@ class Client:
         name: str | None
         created_at: datetime
         latest_run_status: t.Optional["Client.StrikeRunStatus"]
-        latest_version: "Client.StrikeAgentVersion"
         latest_run_id: UUID | None
+        latest_version: "Client.StrikeAgentVersion"
         revision: int
 
     class StrikeRunOutputScore(BaseModel):
@@ -306,6 +306,7 @@ class Client:
         strike_name: str
         strike_type: str
         strike_description: str | None
+        model: str | None
         agent_id: UUID
         agent_key: str
         agent_revision: int
