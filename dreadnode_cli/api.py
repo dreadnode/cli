@@ -61,6 +61,7 @@ class Client:
                 "Accept": "application/json",
             },
             base_url=self._base_url,
+            timeout=30,
         )
 
         if debug:
@@ -395,7 +396,7 @@ class Client:
         return [self.StrikeRunSummaryResponse(**run) for run in response.json()]
 
 
-def client(*, profile: str | None = None) -> Client:
+def create_client(*, profile: str | None = None) -> Client:
     """Create an authenticated API client using stored configuration data."""
 
     user_config = UserConfig.read()

@@ -24,7 +24,7 @@ def format_difficulty(difficulty: str) -> str:
 @cli.command(help="List challenges")
 @pretty_cli
 def list() -> None:
-    challenges = api.client().list_challenges()
+    challenges = api.create_client().list_challenges()
 
     table = Table(box=box.ROUNDED)
     table.add_column("Title")
@@ -59,7 +59,7 @@ def artifact(
         ),
     ] = pathlib.Path("."),
 ) -> None:
-    content = api.client().get_challenge_artifact(challenge_id, artifact_name)
+    content = api.create_client().get_challenge_artifact(challenge_id, artifact_name)
     file_path = output_path / artifact_name
     file_path.write_bytes(content)
 
@@ -74,7 +74,7 @@ def submit_flag(
 ) -> None:
     print(f":pirate_flag: submitting flag to challenge [bold]{challenge}[/] ...")
 
-    correct = api.client().submit_challenge_flag(challenge, flag)
+    correct = api.create_client().submit_challenge_flag(challenge, flag)
 
     if correct:
         print(":tada: The flag was correct. Congrats!")

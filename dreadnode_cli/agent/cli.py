@@ -49,7 +49,7 @@ def init(
         Template, typer.Option("--template", "-t", help="The template to use for the agent")
     ] = Template.rigging,
 ) -> None:
-    client = api.client()
+    client = api.create_client()
 
     try:
         strike_response = client.get_strike(strike)
@@ -114,7 +114,7 @@ def push(
     print(f":package: Pushing agent to [b]{repository}:{tag}[/] ...")
     docker.push(image, repository, tag)
 
-    client = api.client()
+    client = api.create_client()
     container = api.Client.Container(image=f"{repository}:{tag}", env=env, name=None)
 
     if new or not agent_config.links:
@@ -158,7 +158,7 @@ def deploy(
     agent_config = AgentConfig.read(directory)
     active_link = agent_config.active_link
 
-    client = api.client()
+    client = api.create_client()
     agent = client.get_strike_agent(active_link.id)
 
     strike = strike or agent_config.strike
@@ -202,14 +202,14 @@ def models(
     if strike is None:
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
 
-    strike_response = api.client().get_strike(strike)
+    strike_response = api.create_client().get_strike(strike)
     print(format_models(strike_response.models))
 
 
 @cli.command(help="List all strikes")
 @pretty_cli
 def strikes() -> None:
-    client = api.client()
+    client = api.create_client()
     strikes = client.list_strikes()
     print(format_strikes(strikes))
 
@@ -232,7 +232,7 @@ def latest(
         print(":exclamation: No runs yet, use [bold]dreadnode agent deploy[/]")
         return
 
-    client = api.client()
+    client = api.create_client()
     run = client.get_strike_run(str(active_link.runs[-1]))
 
     if raw:
@@ -250,7 +250,7 @@ def show(
     ] = pathlib.Path("."),
 ) -> None:
     active_link = AgentConfig.read(directory).active_link
-    client = api.client()
+    client = api.create_client()
     agent = client.get_strike_agent(active_link.id)
     print(format_agent(agent))
 
@@ -263,7 +263,7 @@ def versions(
     ] = pathlib.Path("."),
 ) -> None:
     active_link = AgentConfig.read(directory).active_link
-    client = api.client()
+    client = api.create_client()
     agent = client.get_strike_agent(active_link.id)
     print(format_agent_versions(agent))
 
@@ -277,7 +277,7 @@ def runs(
 ) -> None:
     active_link = AgentConfig.read(directory).active_link
 
-    client = api.client()
+    client = api.create_client()
     runs = [run for run in client.list_strike_runs() if run.id in active_link.runs and run.start is not None]
     runs = sorted(runs, key=lambda r: r.start or 0, reverse=True)
     print(format_runs(runs))
@@ -291,7 +291,7 @@ def links(
     ] = pathlib.Path("."),
 ) -> None:
     agent_config = AgentConfig.read(directory)
-    client = api.client()
+    client = api.create_client()
 
     _ = agent_config.active_link
 

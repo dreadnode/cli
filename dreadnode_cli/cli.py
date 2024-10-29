@@ -85,7 +85,7 @@ def refresh() -> None:
     user_config = UserConfig.read()
     server_config = user_config.get_server_config()
 
-    client = api.client()
+    client = api.create_client()
     user = client.get_user()
 
     server_config.email = user.email_address
