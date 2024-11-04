@@ -1,14 +1,18 @@
-import asyncio
+import atexit
 import json
+import time
+import typing as t
 from datetime import datetime, timezone
-from typing import Any
+from uuid import UUID
 
 import httpx
+from pydantic import BaseModel
 from rich import print
 
 from dreadnode_cli import __version__, utils
-from dreadnode_cli.config import ServerConfig, UserConfig
+from dreadnode_cli.config import UserConfig
 from dreadnode_cli.defaults import (
+    DEBUG,
     DEFAULT_MAX_POLL_TIME,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_TOKEN_MAX_TTL,
@@ -39,54 +43,48 @@ class Token:
         return self.ttl() <= DEFAULT_TOKEN_MAX_TTL
 
 
-class Authentication:
-    """Authentication data for the Dreadnode API."""
-
-    access_token: Token
-    refresh_token: Token
-    needs_flush: bool = False
-
-    def __init__(self, access_token: str, refresh_token: str, needs_flush: bool = False):
-        self.access_token = Token(access_token)
-        self.refresh_token = Token(refresh_token)
-        self.needs_flush = needs_flush
-
-    def is_expired(self) -> bool:
-        """Return True if either of the tokens is expired."""
-        return self.refresh_token.is_expired() or self.access_token.is_expired()
-
-    def is_close_to_expiry(self) -> bool:
-        """Return True if either of the tokens is close to expiry."""
-        return self.refresh_token.is_close_to_expiry() or self.access_token.is_close_to_expiry()
-
-
 class Client:
     """Client for the Dreadnode API."""
-
-    debug: bool = False
-
-    base_url: str
-    auth: Authentication | None = None
 
     def __init__(
         self,
         base_url: str = PLATFORM_BASE_URL,
-        auth: Authentication | None = None,
-        debug: bool = False,
+        *,
+        cookies: dict[str, str] | None = None,
+        debug: bool = DEBUG,
     ):
-        self.base_url = base_url.rstrip("/")
-        self.debug = debug
-        self.auth = auth
+        self._base_url = base_url.rstrip("/")
+        self._client = httpx.Client(
+            cookies=cookies,
+            headers={
+                "User-Agent": f"dreadnode-cli/{__version__}",
+                "Accept": "application/json",
+            },
+            base_url=self._base_url,
+            timeout=30,
+        )
 
-    async def _log_request(self, request: httpx.Request) -> None:
+        if debug:
+            self._client.event_hooks["request"].append(self._log_request)
+            self._client.event_hooks["response"].append(self._log_response)
+
+    def _log_request(self, request: httpx.Request) -> None:
         """Log every request to the console if debug is enabled."""
 
-        if self.debug:
-            print("-------------------------------------------")
-            print(f"[bold]{request.method}[/] {request.url}")
-            print("Headers:", request.headers)
-            print("Content:", request.content)
-            print("-------------------------------------------")
+        print("-------------------------------------------")
+        print(f"[bold]{request.method}[/] {request.url}")
+        print("Headers:", request.headers)
+        print("Content:", request.content)
+        print("-------------------------------------------")
+
+    def _log_response(self, response: httpx.Response) -> None:
+        """Log every response to the console if debug is enabled."""
+
+        print("-------------------------------------------")
+        print(f"Response: {response.status_code}")
+        print("Headers:", response.headers)
+        print("Content:", response.read())
+        print("--------------------------------------------")
 
     def _get_error_message(self, response: httpx.Response) -> str:
         """Get the error message from the response."""
@@ -97,179 +95,341 @@ class Client:
         except Exception:
             return str(response.content)
 
-    async def _request(
+    def _request(
         self,
         method: str,
         path: str,
-        json_data: dict[str, str] | None = None,
-        auth: bool = True,
-        allow_non_ok: bool = False,
+        query_params: dict[str, str] | None = None,
+        json_data: dict[str, t.Any] | None = None,
     ) -> httpx.Response:
-        """Make a request to the Dreadnode API."""
+        """Make a raw request to the API."""
 
-        cookies = None
-        headers = {
-            "User-Agent": f"dreadnode-cli/{__version__}",
-            "Accept": "application/json",
-        }
+        return self._client.request(method, path, json=json_data, params=query_params)
 
-        if auth:
-            # check if we have valid auth data
-            if not self.auth:
-                raise Exception("not authenticated")
-            elif self.auth.is_expired():
-                raise Exception("authentication expired")
-            # The refresh_token can be sent along w/ requests as a cookie and the server will
-            # automatically refresh the access_token if needed and put it back into
-            # the access_token cookie.
-            cookies = {"refresh_token": self.auth.refresh_token.data}
-            # The access_token should be used for all requests.
-            headers["Authorization"] = f"Bearer {self.auth.access_token.data}"
+    def request(
+        self,
+        method: str,
+        path: str,
+        query_params: dict[str, str] | None = None,
+        json_data: dict[str, t.Any] | None = None,
+    ) -> httpx.Response:
+        """Make a request to the API. Raise an exception for non-200 status codes."""
 
-        async with httpx.AsyncClient(
-            cookies=cookies, headers=headers, event_hooks={"request": [self._log_request]}
-        ) as client:
-            response = await client.request(method, f"{self.base_url}{path}", json=json_data)
+        response = self._request(method, path, query_params, json_data)
 
-            # see if the endpoint returned refreshed tokens
-            access_token = response.cookies.get("access_token")
-            refresh_token = response.cookies.get("refresh_token")
+        if response.status_code == 401:
+            raise Exception("Authentication expired, use [bold]dreadnode login[/]")
 
-            if access_token and refresh_token:
-                # update auth data only if it changed
-                if not self.auth or (
-                    self.auth
-                    and self.auth.access_token.data == access_token
-                    and self.auth.refresh_token.data == refresh_token
-                ):
-                    # this will be saved to disk on exit
-                    self.auth = Authentication(access_token, refresh_token, needs_flush=True)
+        try:
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as e:
+            raise Exception(self._get_error_message(response)) from e
 
-            if allow_non_ok or response.status_code == 200:
-                return response
-            else:
-                raise Exception(self._get_error_message(response))
+    # Auth
 
     def url_for_user_code(self, user_code: str) -> str:
         """Get the URL to verify the user code."""
 
-        return f"{self.base_url}/account/device?code={user_code}"
+        return f"{self._base_url}/account/device?code={user_code}"
 
-    async def get_device_codes(self) -> Any:
+    class DeviceCodeResponse(BaseModel):
+        id: UUID
+        completed: bool
+        device_code: str
+        expires_at: datetime
+        expires_in: int
+        user_code: str
+        verification_url: str
+
+    def get_device_codes(self) -> DeviceCodeResponse:
         """Start the authentication flow by requesting user and device codes."""
 
-        response = await self._request("POST", "/api/auth/device/code", auth=False)
-        return response.json()
+        response = self.request("POST", "/api/auth/device/code")
+        return self.DeviceCodeResponse(**response.json())
 
-    async def poll_for_token(
+    class AccessRefreshTokenResponse(BaseModel):
+        access_token: str
+        refresh_token: str
+
+    def poll_for_token(
         self, device_code: str, interval: int = DEFAULT_POLL_INTERVAL, max_poll_time: int = DEFAULT_MAX_POLL_TIME
-    ) -> Any | None:
+    ) -> AccessRefreshTokenResponse:
         """Poll for the access token with the given device code."""
 
         start_time = datetime.now(timezone.utc)
         while (datetime.now(timezone.utc) - start_time).total_seconds() < max_poll_time:
-            response = await self._request(
-                "POST", "/api/auth/device/token", json_data={"device_code": device_code}, auth=False, allow_non_ok=True
-            )
+            response = self._request("POST", "/api/auth/device/token", json_data={"device_code": device_code})
 
             if response.status_code == 200:
-                return response.json()
-            elif response.status_code == 400:
-                error_data = response.json()
-                if error_data.get("detail") == "Device code not verified":
-                    print("Waiting for user verification...")
-                elif error_data.get("detail") == "Device code expired":
-                    raise Exception("Device code has expired.")
-                else:
-                    raise Exception(f"Unexpected error: {self._get_error_message(response)}")
+                return self.AccessRefreshTokenResponse(**response.json())
             elif response.status_code != 401:
-                raise Exception(f"Unexpected status code: {response.status_code}")
+                raise Exception(self._get_error_message(response))
 
-            await asyncio.sleep(interval)
+            time.sleep(interval)
 
-        return None
+        raise Exception("Polling for token timed out")
 
-    async def refresh_auth(self) -> Authentication:
-        """Refresh the authentication data."""
+    # User
 
-        if not self.auth:
-            raise Exception("not authenticated")
+    class UserAPIKeyResponse(BaseModel):
+        key: str
 
-        print(":water_wave: refreshing authentication data ...")
+    class UserResponse(BaseModel):
+        id: UUID
+        email_address: str
+        username: str
+        api_key: "Client.UserAPIKeyResponse"
 
-        response = await self._request(
-            "POST", "/api/auth/refresh", auth=False, json_data={"refresh_token": self.auth.refresh_token.data}
-        )
-        # new tokens set via cookies
-        resp = dict(response.cookies)
-        if "access_token" not in resp:
-            raise Exception("no access_token in refresh response")
-        elif "refresh_token" not in resp:
-            raise Exception("no refresh_token in refresh response")
+    def get_user(self) -> UserResponse:
+        """Get the user email and username."""
 
-        # update the auth data, this will be saved to disk on exit
-        self.auth = Authentication(resp["access_token"], resp["refresh_token"], needs_flush=True)
+        response = self.request("GET", "/api/user")
+        return self.UserResponse(**response.json())
 
-        return self.auth
+    # Challenges
 
-    async def list_challenges(self) -> Any:
+    class ChallengeResponse(BaseModel):
+        authors: list[str]
+        difficulty: str
+        key: str
+        lead: str
+        name: str
+        status: str
+        title: str
+        tags: list[str]
+
+    def list_challenges(self) -> list[ChallengeResponse]:
         """List all challenges."""
 
-        response = await self._request("GET", "/api/challenges")
+        response = self.request("GET", "/api/challenges")
+        return [self.ChallengeResponse(**challenge) for challenge in response.json()]
 
-        return response.json()
-
-    async def get_challenge_artifact(self, challenge: str, artifact_name: str) -> bytes:
+    def get_challenge_artifact(self, challenge: str, artifact_name: str) -> bytes:
         """Get a challenge artifact."""
 
-        response = await self._request("GET", f"/api/artifacts/{challenge}/{artifact_name}")
-
+        response = self.request("GET", f"/api/artifacts/{challenge}/{artifact_name}")
         return response.content
 
-    async def submit_challenge_flag(self, challenge: str, flag: str) -> bool:
+    def submit_challenge_flag(self, challenge: str, flag: str) -> bool:
         """Submit a flag to a challenge."""
 
-        print(f":pirate_flag: submitting flag to challenge [bold]{challenge}[/] ...")
-
-        response = await self._request(
-            "POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag, "challenge": challenge}
-        )
-
+        response = self.request("POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag})
         return bool(response.json().get("correct", False))
 
+    # Strikes
 
-def _flush_auth_on_exit(profile: str, config: ServerConfig, client: Client) -> None:
-    """Flush the authentication data to disk if it has been updated."""
+    StrikeRunStatus = t.Literal["pending", "deploying", "running", "completed", "timeout", "failed"]
 
-    if client.auth and client.auth.needs_flush:
-        print(":floppy_disk: flushing authentication data to disk ...")
-        config.access_token = client.auth.access_token.data
-        config.refresh_token = client.auth.refresh_token.data
-        UserConfig.read().set_profile_config(profile, config).write()
+    class StrikeModel(BaseModel):
+        key: str
+        name: str
+        provider: str
+
+    class StrikeZone(BaseModel):
+        key: str
+        name: str
+        description: str | None
+
+    class StrikeSummaryResponse(BaseModel):
+        id: UUID
+        key: str
+        competitive: bool
+        models: list["Client.StrikeModel"]
+        type: str
+        name: str
+        description: str | None
+
+    class StrikeResponse(StrikeSummaryResponse):
+        zones: list["Client.StrikeZone"]
+
+    class Container(BaseModel):
+        image: str
+        env: dict[str, str]
+        name: str | None
+
+    class StrikeAgentVersion(BaseModel):
+        id: UUID
+        created_at: datetime
+        notes: str | None
+        container: "Client.Container"
+
+    class StrikeAgentResponse(BaseModel):
+        id: UUID
+        user_id: UUID
+        strike_id: UUID | None
+        key: str
+        name: str | None
+        created_at: datetime
+        latest_run_status: t.Optional["Client.StrikeRunStatus"]
+        latest_run_id: UUID | None
+        versions: list["Client.StrikeAgentVersion"]
+        latest_version: "Client.StrikeAgentVersion"
+        revision: int
+
+    class StrikeAgentSummaryResponse(BaseModel):
+        id: UUID
+        user_id: UUID
+        strike_id: UUID | None
+        key: str
+        name: str | None
+        created_at: datetime
+        latest_run_status: t.Optional["Client.StrikeRunStatus"]
+        latest_run_id: UUID | None
+        latest_version: "Client.StrikeAgentVersion"
+        revision: int
+
+    class StrikeRunOutputScore(BaseModel):
+        value: int | float | bool
+        explanation: str | None = None
+        metadata: dict[str, t.Any] = {}
+
+    class StrikeRunOutput(BaseModel):
+        data: dict[str, t.Any]
+        score: t.Optional["Client.StrikeRunOutputScore"] = None
+        metadata: dict[str, t.Any] = {}
+
+    class StrikeRunZone(BaseModel):
+        id: UUID
+        key: str
+        status: "Client.StrikeRunStatus"
+        start: datetime | None
+        end: datetime | None
+        agent_logs: str | None
+        container_logs: dict[str, str]
+        outputs: list["Client.StrikeRunOutput"]
+        inferences: list[dict[str, t.Any]]
+
+    class StrikeRunSummaryResponse(BaseModel):
+        id: UUID
+        strike_id: UUID
+        strike_key: str
+        strike_name: str
+        strike_type: str
+        strike_description: str | None
+        model: str | None
+        agent_id: UUID
+        agent_key: str
+        agent_revision: int
+        agent_version: "Client.StrikeAgentVersion"
+        status: "Client.StrikeRunStatus"
+        start: datetime | None
+        end: datetime | None
+
+    class StrikeRunResponse(StrikeRunSummaryResponse):
+        zones: list["Client.StrikeRunZone"]
+
+    def get_strike(self, strike: str) -> StrikeResponse:
+        response = self.request("GET", f"/api/strikes/{strike}")
+        return self.StrikeResponse(**response.json())
+
+    def list_strikes(self) -> list[StrikeSummaryResponse]:
+        response = self.request("GET", "/api/strikes")
+        return [self.StrikeResponse(**strike) for strike in response.json()]
+
+    def list_strike_agents(self, strike_id: UUID | None = None) -> list[StrikeAgentSummaryResponse]:
+        response = self.request(
+            "GET",
+            "/api/strikes/agents",
+            query_params={"strike_id": str(strike_id)} if strike_id else None,
+        )
+        return [self.StrikeAgentSummaryResponse(**agent) for agent in response.json()]
+
+    def get_strike_agent(self, agent: UUID | str) -> StrikeAgentResponse:
+        response = self.request("GET", f"/api/strikes/agents/{agent}")
+        return self.StrikeAgentResponse(**response.json())
+
+    def create_strike_agent(
+        self, container: Container, name: str, strike: str | None = None, notes: str | None = None
+    ) -> StrikeAgentResponse:
+        response = self.request(
+            "POST",
+            "/api/strikes/agents",
+            json_data={
+                "container": container.model_dump(mode="json"),
+                "strike": strike,
+                "name": name,
+                "notes": notes,
+            },
+        )
+        return self.StrikeAgentResponse(**response.json())
+
+    def update_strike_agent(self, agent: str, name: str) -> StrikeAgentResponse:
+        response = self.request("PATCH", f"/api/strikes/agents/{agent}", json_data={"name": name})
+        return self.StrikeAgentResponse(**response.json())
+
+    def create_strike_agent_version(
+        self, agent: str, container: Container, notes: str | None = None
+    ) -> StrikeAgentResponse:
+        response = self.request(
+            "POST",
+            f"/api/strikes/agents/{agent}/versions",
+            json_data={
+                "container": container.model_dump(mode="json"),
+                "notes": notes,
+            },
+        )
+        return self.StrikeAgentResponse(**response.json())
+
+    def start_strike_run(
+        self, agent_version_id: UUID, *, model: str | None = None, strike: UUID | str | None = None
+    ) -> StrikeRunResponse:
+        response = self.request(
+            "POST",
+            "/api/strikes/runs",
+            json_data={
+                "agent_version_id": str(agent_version_id),
+                "model": model,
+                "strike": str(strike) if strike else None,
+            },
+        )
+        return self.StrikeRunResponse(**response.json())
+
+    def get_strike_run(self, run: UUID | str) -> StrikeRunResponse:
+        response = self.request("GET", f"/api/strikes/runs/{run}")
+        return self.StrikeRunResponse(**response.json())
+
+    def list_strike_runs(self, *, strike_id: UUID | str | None = None) -> list[StrikeRunSummaryResponse]:
+        response = self.request(
+            "GET", "/api/strikes/runs", query_params={"strike_id": str(strike_id)} if strike_id else None
+        )
+        return [self.StrikeRunSummaryResponse(**run) for run in response.json()]
 
 
-async def setup_authenticated_client(profile: str, config: ServerConfig, force_refresh: bool = False) -> Client:
-    """Create an API client and refresh the authentication data if it is close to expiry."""
+def create_client(*, profile: str | None = None) -> Client:
+    """Create an authenticated API client using stored configuration data."""
 
-    # load existing auth data
-    auth = Authentication(config.access_token, config.refresh_token)
-    client = Client(base_url=config.url, auth=auth)
+    user_config = UserConfig.read()
+    config = user_config.get_server_config(profile)
+    client = Client(config.url, cookies={"refresh_token": config.refresh_token, "access_token": config.access_token})
 
-    if auth.refresh_token.is_expired():
-        raise Exception("authentication expired, use [bold]dreadnode login[/] to authenticate again")
-    elif force_refresh or auth.is_close_to_expiry():
-        # update the auth data
-        new_auth = await client.refresh_auth()
-        # save on disk
-        config.access_token = new_auth.access_token.data
-        config.refresh_token = new_auth.refresh_token.data
+    # Pre-emptively check if the token is expired
+    if Token(config.refresh_token).is_expired():
+        raise Exception("Authentication expired, use [bold]dreadnode login[/]")
 
-        UserConfig.read().set_profile_config(profile, config).write()
+    def _flush_auth_changes() -> None:
+        """Flush the authentication data to disk if it has been updated."""
 
-    else:
-        import atexit
+        # Weird hack to get around the fact that httpx assigns
+        # a strange domain name for localhost requests that cause
+        # conflict errors if we try to get the cookies directly
 
-        # save new auth on disk if it's been refreshed
-        atexit.register(lambda: _flush_auth_on_exit(profile, config, client))
+        cookies = list(client._client.cookies.jar)
+        access_token = next((cookie.value for cookie in reversed(cookies) if cookie.name == "access_token"), None)
+        refresh_token = next((cookie.value for cookie in reversed(cookies) if cookie.name == "refresh_token"), None)
+
+        changed: bool = False
+        if access_token and access_token != config.access_token:
+            changed = True
+            config.access_token = access_token
+
+        if refresh_token and refresh_token != config.refresh_token:
+            changed = True
+            config.refresh_token = refresh_token
+
+        if changed:
+            user_config.set_server_config(config, profile).write()
+
+    atexit.register(_flush_auth_changes)
 
     return client

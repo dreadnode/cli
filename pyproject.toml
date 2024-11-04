@@ -14,7 +14,8 @@ pydantic = "^2.9.2"
 jinja2 = "^3.1.4"
 types-requests = "^2.32.0.20240914"
 httpx = "^0.27.2"
-asyncio = "^3.4.3"
+ruamel-yaml = "^0.18.6"
+docker = "^7.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.8.0"
@@ -26,6 +27,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 dreadnode = 'dreadnode_cli.__main__:run'
+dn = 'dreadnode_cli.__main__:run'
 
 [tool.poetry.plugins."pipx.run"]
 dreadnode-cli = 'dreadnode_cli.__main__:run'
