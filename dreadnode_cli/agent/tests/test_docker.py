@@ -34,7 +34,7 @@ class MockDockerClient:
             return MockImage()
 
 
-def test_build(tmp_path: Path) -> None:
+async def test_build(tmp_path: Path) -> None:
     # set mock client
     docker.client = MockDockerClient()
 
@@ -47,7 +47,7 @@ def test_build(tmp_path: Path) -> None:
     assert image is not None
 
 
-def test_push(tmp_path: Path) -> None:
+async def test_push(tmp_path: Path) -> None:
     # set mock client
     docker.client = MockDockerClient()
 
@@ -60,7 +60,7 @@ def test_push(tmp_path: Path) -> None:
     docker.push(image, "test-repo", "latest")
 
 
-def test_get_registry() -> None:
+async def test_get_registry() -> None:
     from dreadnode_cli.config import ServerConfig
 
     # Test production registry

@@ -6,18 +6,18 @@ import pytest
 from dreadnode_cli.agent.config import AgentConfig
 
 
-def test_agent_config_read_not_initialized(tmp_path: Path) -> None:
+async def test_agent_config_read_not_initialized(tmp_path: Path) -> None:
     with pytest.raises(Exception, match="is not initialized"):
         AgentConfig.read(tmp_path)
 
 
-def test_agent_config_active_link_no_links() -> None:
+async def test_agent_config_active_link_no_links() -> None:
     config = AgentConfig(project_name="test")
     with pytest.raises(Exception, match="No agent is currently linked"):
         _ = config.active_link
 
 
-def test_agent_config_add_link() -> None:
+async def test_agent_config_add_link() -> None:
     config = AgentConfig(project_name="test")
     id = UUID("00000000-0000-0000-0000-000000000000")
 
@@ -28,7 +28,7 @@ def test_agent_config_add_link() -> None:
     assert config.links["test"].runs == []
 
 
-def test_agent_config_add_run() -> None:
+async def test_agent_config_add_run() -> None:
     config = AgentConfig(project_name="test")
     agent_id = UUID("00000000-0000-0000-0000-000000000000")
     run_id = UUID("11111111-1111-1111-1111-111111111111")
@@ -39,7 +39,7 @@ def test_agent_config_add_run() -> None:
     assert config.links["test"].runs == [run_id]
 
 
-def test_agent_config_write_read(tmp_path: Path) -> None:
+async def test_agent_config_write_read(tmp_path: Path) -> None:
     config = AgentConfig(project_name="test")
     agent_id = UUID("00000000-0000-0000-0000-000000000000")
     run_id = UUID("11111111-1111-1111-1111-111111111111")
@@ -55,7 +55,7 @@ def test_agent_config_write_read(tmp_path: Path) -> None:
     assert loaded.links["test"].runs == [run_id]
 
 
-def test_agent_config_update_active() -> None:
+async def test_agent_config_update_active() -> None:
     config = AgentConfig(project_name="test")
     id1 = UUID("00000000-0000-0000-0000-000000000000")
     id2 = UUID("11111111-1111-1111-1111-111111111111")
