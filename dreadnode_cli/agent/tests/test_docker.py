@@ -4,16 +4,21 @@ from pathlib import Path
 import dreadnode_cli.agent.docker as docker
 
 
+class MockImage:
+    def tag(self, *args: t.Any, **kwargs: t.Any) -> None:
+        pass
+
+
 class MockDockerClient:
     """Simple mock Docker client for testing."""
 
     class api:
         @staticmethod
-        def build(*args, **kwargs) -> list[dict[str, t.Any]]:
+        def build(*args: t.Any, **kwargs: t.Any) -> list[dict[str, t.Any]]:
             return [{"stream": "Step 1/1 : FROM hello-world\n"}, {"aux": {"ID": "sha256:mock123"}}]
 
         @staticmethod
-        def push(*args, **kwargs) -> list[dict[str, t.Any]]:
+        def push(*args: t.Any, **kwargs: t.Any) -> list[dict[str, t.Any]]:
             return [
                 {"status": "Preparing", "id": "layer1"},
                 {"status": "Layer already exists", "id": "layer1"},
@@ -21,16 +26,12 @@ class MockDockerClient:
             ]
 
         @staticmethod
-        def login(*args, **kwargs) -> dict[str, t.Any]:
+        def login(*args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
             return {"Status": "Login Succeeded"}
 
     class images:
         @staticmethod
-        def get(id: str) -> "MockDockerClient.images.MockImage":
-            class MockImage:
-                def tag(self, *args, **kwargs):
-                    pass
-
+        def get(id: str) -> MockImage:
             return MockImage()
 
 

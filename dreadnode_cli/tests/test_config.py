@@ -1,5 +1,8 @@
+# mypy: ignore-errors
+
 from pathlib import Path
 
+import pydantic
 import pytest
 
 from dreadnode_cli.config import ServerConfig, UserConfig
@@ -23,7 +26,7 @@ async def test_server_config() -> None:
     assert config.refresh_token == "refresh123"
 
     # Test invalid server config model
-    with pytest.raises(Exception):
+    with pytest.raises(pydantic.ValidationError):
         ServerConfig()
 
 
@@ -64,7 +67,7 @@ async def test_user_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert loaded_config.servers["default"] == server_config
 
     # Test invalid profile access
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         config.get_server_config("nonexistent")
 
     # Test auto-setting active profile
