@@ -5,7 +5,7 @@ from unittest.mock import patch
 from dreadnode_cli.utils import copy_template, parse_jwt_token_expiration, time_to
 
 
-async def test_time_to() -> None:
+def test_time_to() -> None:
     now = datetime.now()
 
     # Test days
@@ -25,7 +25,7 @@ async def test_time_to() -> None:
     assert time_to(future) == "Just now"
 
 
-async def test_parse_jwt_token_expiration() -> None:
+def test_parse_jwt_token_expiration() -> None:
     # Test token with expiration
     token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3MDg2NTYwMDB9.mock_signature"
     exp_date = parse_jwt_token_expiration(token)
@@ -33,7 +33,7 @@ async def test_parse_jwt_token_expiration() -> None:
     assert exp_date == datetime.fromtimestamp(1708656000)
 
 
-async def test_copy_template(tmp_path: pathlib.Path) -> None:
+def test_copy_template(tmp_path: pathlib.Path) -> None:
     # Create source template directory
     src_dir = tmp_path / "templates"
     src_dir.mkdir()

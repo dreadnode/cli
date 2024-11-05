@@ -8,7 +8,7 @@ import pytest
 from dreadnode_cli.config import ServerConfig, UserConfig
 
 
-async def test_server_config() -> None:
+def test_server_config() -> None:
     # Test valid server config
     config = ServerConfig(
         url="https://crucible.dreadnode.io",
@@ -30,7 +30,7 @@ async def test_server_config() -> None:
         ServerConfig()
 
 
-async def test_user_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_user_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock config path to use temporary directory
     mock_config_path = tmp_path / "config.yaml"
     monkeypatch.setattr("dreadnode_cli.config.USER_CONFIG_PATH", mock_config_path)

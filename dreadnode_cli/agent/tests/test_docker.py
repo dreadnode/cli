@@ -49,13 +49,13 @@ def _create_test_server_config(url: str = "https://crucible.dreadnode.io") -> Se
     )
 
 
-async def test_docker_not_available_get_registry() -> None:
+def test_docker_not_available_get_registry() -> None:
     docker.client = None
     with pytest.raises(Exception, match="Docker not available"):
         docker.get_registry(_create_test_server_config())
 
 
-async def test_docker_not_available_build(tmp_path: Path) -> None:
+def test_docker_not_available_build(tmp_path: Path) -> None:
     docker.client = None
     with pytest.raises(Exception, match="Docker not available"):
         dockerfile = tmp_path / "Dockerfile"
@@ -65,14 +65,14 @@ async def test_docker_not_available_build(tmp_path: Path) -> None:
         assert image is None
 
 
-async def test_docker_not_available_push() -> None:
+def test_docker_not_available_push() -> None:
     docker.client = None
     with pytest.raises(Exception, match="Docker not available"):
         image = MockImage()
         docker.push(image, "test-repo", "latest")
 
 
-async def test_build(tmp_path: Path) -> None:
+def test_build(tmp_path: Path) -> None:
     # set mock client
     docker.client = MockDockerClient()
 
@@ -85,7 +85,7 @@ async def test_build(tmp_path: Path) -> None:
     assert image is not None
 
 
-async def test_push(tmp_path: Path) -> None:
+def test_push(tmp_path: Path) -> None:
     # set mock client
     docker.client = MockDockerClient()
 
@@ -98,7 +98,7 @@ async def test_push(tmp_path: Path) -> None:
     docker.push(image, "test-repo", "latest")
 
 
-async def test_get_registry() -> None:
+def test_get_registry() -> None:
     # Test production registry
     config = _create_test_server_config()
     assert docker.get_registry(config) == "registry.dreadnode.io"

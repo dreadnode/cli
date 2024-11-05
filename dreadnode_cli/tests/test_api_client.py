@@ -6,18 +6,18 @@ import pytest
 from dreadnode_cli import api
 
 
-async def test_client_init() -> None:
+def test_client_init() -> None:
     client = api.Client("http://test.com")
     assert client._base_url == "http://test.com"
     assert client._client.headers["Accept"] == "application/json"
 
 
-async def test_client_init_strips_trailing_slash() -> None:
+def test_client_init_strips_trailing_slash() -> None:
     client = api.Client("http://test.com/")
     assert client._base_url == "http://test.com"
 
 
-async def test_get_error_message_json() -> None:
+def test_get_error_message_json() -> None:
     client = api.Client()
     response = httpx.Response(
         status_code=400,
@@ -27,7 +27,7 @@ async def test_get_error_message_json() -> None:
     assert client._get_error_message(response) == "400: test error"
 
 
-async def test_get_error_message_raw() -> None:
+def test_get_error_message_raw() -> None:
     client = api.Client()
     response = httpx.Response(
         status_code=400,
@@ -37,24 +37,24 @@ async def test_get_error_message_raw() -> None:
     assert client._get_error_message(response) == "b'raw error'"
 
 
-async def test_does_not_install_debug_event_hooks_by_default() -> None:
+def test_does_not_install_debug_event_hooks_by_default() -> None:
     client = api.Client()
     assert client._client.event_hooks["request"] == []
     assert client._client.event_hooks["response"] == []
 
 
-async def test_installs_debug_event_hooks_if_needed() -> None:
+def test_installs_debug_event_hooks_if_needed() -> None:
     client = api.Client(debug=True)
     assert client._client.event_hooks["request"]
     assert client._client.event_hooks["response"]
 
 
-async def test_url_for_user_code() -> None:
+def test_url_for_user_code() -> None:
     client = api.Client("http://test.com")
     assert client.url_for_user_code("ABC123") == "http://test.com/account/device?code=ABC123"
 
 
-async def test_poll_for_token_success(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_poll_for_token_success(monkeypatch: pytest.MonkeyPatch) -> None:
     client = api.Client()
 
     # Mock successful response after first try
@@ -72,7 +72,7 @@ async def test_poll_for_token_success(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.refresh_token == "refresh123"
 
 
-async def test_poll_for_token_retry_then_success(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_poll_for_token_retry_then_success(monkeypatch: pytest.MonkeyPatch) -> None:
     client = api.Client()
 
     # Mock response that succeeds after one 401
@@ -98,7 +98,7 @@ async def test_poll_for_token_retry_then_success(monkeypatch: pytest.MonkeyPatch
     assert attempts == 2
 
 
-async def test_poll_for_token_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_poll_for_token_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     client = api.Client()
 
     # Mock response that always returns 401

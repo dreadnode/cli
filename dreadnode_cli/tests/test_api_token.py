@@ -4,12 +4,12 @@ import dreadnode_cli.api as api
 from dreadnode_cli.tests.test_lib import create_jwt_test_token
 
 
-async def test_invalid_token() -> None:
+def test_invalid_token() -> None:
     with pytest.raises(ValueError):
         api.Token("invalid_token")
 
 
-async def test_expired_token() -> None:
+def test_expired_token() -> None:
     token = api.Token(create_jwt_test_token(0))
 
     assert token.is_expired() is True
@@ -17,7 +17,7 @@ async def test_expired_token() -> None:
     assert token.ttl() <= 0
 
 
-async def test_close_to_expiry_token() -> None:
+def test_close_to_expiry_token() -> None:
     token = api.Token(create_jwt_test_token(30))
 
     assert token.is_expired() is False

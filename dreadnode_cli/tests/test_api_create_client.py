@@ -9,7 +9,7 @@ from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.tests.test_lib import create_jwt_test_token
 
 
-async def test_create_client_without_config() -> None:
+def test_create_client_without_config() -> None:
     with pytest.raises(Exception, match="No profile is set"):
         _ = api.create_client()
 
@@ -36,16 +36,14 @@ def _create_test_config(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
     return config
 
 
-async def test_create_client_with_exipired_refresh_token(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_create_client_with_exipired_refresh_token(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     _ = _create_test_config(monkeypatch, tmp_path, create_jwt_test_token(0))
 
     with pytest.raises(Exception, match="Authentication expired"):
         _ = api.create_client()
 
 
-async def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     token = create_jwt_test_token(30)
     _ = _create_test_config(monkeypatch, tmp_path, token)
 
@@ -56,7 +54,7 @@ async def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, t
     assert client._client.cookies["refresh_token"] == token
 
 
-async def test_create_client_flushes_auth_changes(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+def test_create_client_flushes_auth_changes(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     # Mock config path to use temporary directory
     mock_config_path = tmp_path / "config.yaml"
     monkeypatch.setattr("dreadnode_cli.config.USER_CONFIG_PATH", mock_config_path)
