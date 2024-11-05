@@ -9,12 +9,16 @@ ENV POETRY_NO_INTERACTION=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
-RUN touch README.md
+COPY pyproject.toml poetry.lock README.md ./
 
 RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
 FROM python:3.12-slim-bookworm AS runtime
+
+# install requirements to use docker from within docker
+RUN apt-get update && apt-get install -y libssl-dev curl ca-certificates
+RUN curl -fsSL https://get.docker.com | sh
+
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"

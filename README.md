@@ -20,10 +20,16 @@ poetry shell
 docker build -t dreadnode .
 ```
 
-and then run:
+Whenever using the CLI from a docker container, remember to share your user configuration, the network from the host and mount the docker socket:
 
 ```bash
-docker run -it dreadnode --help
+docker run -it --net=host -v/var/run/docker.sock:/var/run/docker.sock -v$HOME/.dreadnode:/root/.dreadnode dreadnode --help
+```
+
+Optionally, you can create a bash alias like so:
+
+```bash
+alias dreadnode='docker run -it --net=host -v/var/run/docker.sock:/var/run/docker.sock -v$HOME/.dreadnode:/root/.dreadnode dreadnode'
 ```
 
 ## Usage
