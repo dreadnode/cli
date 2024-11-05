@@ -59,3 +59,6 @@ jobs:
 
     - name: Typecheck
       run: poetry run mypy dreadnode_cli/
+
+    - name: Tests
+      run: poetry run pytest dreadnode_cli/
