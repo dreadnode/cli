@@ -38,18 +38,21 @@ class MockDockerClient:
             return MockImage()
 
 
+def _create_test_server_config(url: str = "https://crucible.dreadnode.io") -> ServerConfig:
+    return ServerConfig(
+        url=url,
+        email="test@example.com",
+        username="test",
+        api_key="test",
+        access_token="test",
+        refresh_token="test",
+    )
+
+
 async def test_docker_not_available_get_registry() -> None:
     docker.client = None
     with pytest.raises(Exception, match="Docker not available"):
-        config = ServerConfig(
-            url="https://crucible.dreadnode.io",
-            email="test@example.com",
-            username="test",
-            api_key="test",
-            access_token="test",
-            refresh_token="test",
-        )
-        docker.get_registry(config)
+        docker.get_registry(_create_test_server_config())
 
 
 async def test_docker_not_available_build(tmp_path: Path) -> None:
@@ -96,48 +99,18 @@ async def test_push(tmp_path: Path) -> None:
 
 
 async def test_get_registry() -> None:
-    from dreadnode_cli.config import ServerConfig
-
     # Test production registry
-    config = ServerConfig(
-        url="https://crucible.dreadnode.io",
-        email="test@example.com",
-        username="test",
-        api_key="test",
-        access_token="test",
-        refresh_token="test",
-    )
+    config = _create_test_server_config()
     assert docker.get_registry(config) == "registry.dreadnode.io"
 
     # Test staging registry
-    config = ServerConfig(
-        url="https://staging-crucible.dreadnode.io",
-        email="test@example.com",
-        username="test",
-        api_key="test",
-        access_token="test",
-        refresh_token="test",
-    )
+    config = _create_test_server_config("https://staging-crucible.dreadnode.io")
     assert docker.get_registry(config) == "staging-registry.dreadnode.io"
 
     # Test dev registry
-    config = ServerConfig(
-        url="https://dev-crucible.dreadnode.io",
-        email="test@example.com",
-        username="test",
-        api_key="test",
-        access_token="test",
-        refresh_token="test",
-    )
+    config = _create_test_server_config("https://dev-crucible.dreadnode.io")
     assert docker.get_registry(config) == "dev-registry.dreadnode.io"
 
     # Test localhost registry
-    config = ServerConfig(
-        url="http://localhost:8000",
-        email="test@example.com",
-        username="test",
-        api_key="test",
-        access_token="test",
-        refresh_token="test",
-    )
+    config = _create_test_server_config("http://localhost:8000")
     assert docker.get_registry(config) == "localhost:5000"
