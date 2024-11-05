@@ -1,7 +1,10 @@
 import typing as t
 from pathlib import Path
 
+import pytest
+
 import dreadnode_cli.agent.docker as docker
+from dreadnode_cli.config import ServerConfig
 
 
 class MockImage:
@@ -33,6 +36,37 @@ class MockDockerClient:
         @staticmethod
         def get(id: str) -> MockImage:
             return MockImage()
+
+
+async def test_docker_not_available_get_registry() -> None:
+    docker.client = None
+    with pytest.raises(Exception, match="Docker not available"):
+        config = ServerConfig(
+            url="https://crucible.dreadnode.io",
+            email="test@example.com",
+            username="test",
+            api_key="test",
+            access_token="test",
+            refresh_token="test",
+        )
+        docker.get_registry(config)
+
+
+async def test_docker_not_available_build(tmp_path: Path) -> None:
+    docker.client = None
+    with pytest.raises(Exception, match="Docker not available"):
+        dockerfile = tmp_path / "Dockerfile"
+        dockerfile.write_text("FROM hello-world")
+
+        image = docker.build(tmp_path)
+        assert image is None
+
+
+async def test_docker_not_available_push() -> None:
+    docker.client = None
+    with pytest.raises(Exception, match="Docker not available"):
+        image = MockImage()
+        docker.push(image, "test-repo", "latest")
 
 
 async def test_build(tmp_path: Path) -> None:

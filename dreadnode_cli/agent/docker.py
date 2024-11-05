@@ -9,11 +9,18 @@ from rich.text import Text
 
 from dreadnode_cli.config import ServerConfig
 
-client = docker.from_env()
+try:
+    client = docker.from_env()
+except docker.errors.DockerException:
+    client = None
 
 
 # TODO: Poor form having a fixed list of registries IMO
 def get_registry(config: ServerConfig) -> str:
+    # fail early if docker is not available
+    if client is None:
+        raise Exception("Docker not available")
+
     if config.url.startswith("https://crucible.dreadnode.io"):
         return "registry.dreadnode.io"
     elif config.url.startswith("https://staging-crucible.dreadnode.io"):
@@ -29,10 +36,16 @@ def get_registry(config: ServerConfig) -> str:
 
 
 def login(registry: str, username: str, password: str) -> None:
+    if client is None:
+        raise Exception("Docker not available")
+
     client.api.login(username=username, password=password, registry=registry)
 
 
 def build(directory: str | pathlib.Path) -> Image:
+    if client is None:
+        raise Exception("Docker not available")
+
     id: str | None = None
     for item in client.api.build(path=str(directory), platform="linux/amd64", decode=True):
         if "error" in item:
@@ -100,6 +113,9 @@ class DockerPushDisplay:
 
 
 def push(image: Image, repository: str, tag: str) -> None:
+    if client is None:
+        raise Exception("Docker not available")
+
     image.tag(repository, tag=tag)
 
     display = DockerPushDisplay()
