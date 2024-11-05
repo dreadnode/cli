@@ -1,14 +1,12 @@
-import base64
-import json
 import pathlib
 from collections.abc import Callable
-from datetime import datetime, timedelta
 
 import httpx
 import pytest
 
 import dreadnode_cli.api as api
 from dreadnode_cli.config import ServerConfig, UserConfig
+from dreadnode_cli.tests.test_lib import create_jwt_test_token
 
 
 async def test_create_client_without_config() -> None:
@@ -41,19 +39,14 @@ def _create_test_config(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 async def test_create_client_with_exipired_refresh_token(
     monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
-    _ = _create_test_config(
-        monkeypatch, tmp_path, "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3MDg2NTYwMDB9.mock_signature"
-    )
+    _ = _create_test_config(monkeypatch, tmp_path, create_jwt_test_token(0))
 
     with pytest.raises(Exception, match="Authentication expired"):
         _ = api.create_client()
 
 
 async def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
-    future_exp = int((datetime.now() + timedelta(seconds=30)).timestamp())
-    obj = {"exp": future_exp}
-    token = f"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.{base64.urlsafe_b64encode(json.dumps(obj).encode()).decode()}.mock_signature"
-
+    token = create_jwt_test_token(30)
     _ = _create_test_config(monkeypatch, tmp_path, token)
 
     client = api.create_client()
@@ -64,14 +57,11 @@ async def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, t
 
 
 async def test_create_client_flushes_auth_changes(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
-    future_exp = int((datetime.now() + timedelta(seconds=30)).timestamp())
-    obj = {"exp": future_exp}
-    token = f"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.{base64.urlsafe_b64encode(json.dumps(obj).encode()).decode()}.mock_signature"
-
     # Mock config path to use temporary directory
     mock_config_path = tmp_path / "config.yaml"
     monkeypatch.setattr("dreadnode_cli.config.USER_CONFIG_PATH", mock_config_path)
 
+    token = create_jwt_test_token(30)
     _ = _create_test_config(monkeypatch, tmp_path, token)
 
     at_exit_called = False
