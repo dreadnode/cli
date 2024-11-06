@@ -9,7 +9,11 @@ from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.tests.test_lib import create_jwt_test_token
 
 
-def test_create_client_without_config() -> None:
+def test_create_client_without_config(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    # Mock config path to use temporary directory
+    mock_config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("dreadnode_cli.config.USER_CONFIG_PATH", mock_config_path)
+
     with pytest.raises(Exception, match="No profile is set"):
         _ = api.create_client()
 
