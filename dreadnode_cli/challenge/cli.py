@@ -1,3 +1,4 @@
+import enum
 import pathlib
 import typing as t
 
@@ -11,20 +12,53 @@ from dreadnode_cli.utils import pretty_cli
 cli = typer.Typer(no_args_is_help=True)
 
 
-def format_difficulty(difficulty: str) -> str:
+class Sorting(str, enum.Enum):
+    none = "none"
+    by_difficulty = "difficulty"
+    by_status = "status"
+    by_title = "title"
+    by_authors = "authors"
+    by_tags = "tags"
+
+
+class SortingOrder(str, enum.Enum):
+    ascending = "ascending"
+    descending = "descending"
+
+
+def map_difficulty(difficulty: str) -> int:
     if difficulty == "easy":
-        return ":skull:"
+        return 1
     elif difficulty == "medium":
-        return ":skull::skull:"
+        return 2
     else:
-        return ":skull::skull::skull:"
+        return 3
 
 
-# TODO: add sorting and filtering
+def format_difficulty(difficulty: str) -> str:
+    return ":skull:" * map_difficulty(difficulty)
+
+
 @cli.command(help="List challenges")
 @pretty_cli
-def list() -> None:
+def list(
+    sorting: t.Annotated[Sorting, typer.Option("--sort-by", help="The sorting order")] = Sorting.none,
+    sorting_order: t.Annotated[
+        SortingOrder, typer.Option("--sort-order", help="The sorting order")
+    ] = SortingOrder.ascending,
+) -> None:
     challenges = api.create_client().list_challenges()
+
+    if sorting == Sorting.by_difficulty:
+        challenges.sort(key=lambda x: map_difficulty(x.difficulty), reverse=sorting_order == SortingOrder.descending)
+    elif sorting == Sorting.by_status:
+        challenges.sort(key=lambda x: x.status, reverse=sorting_order == SortingOrder.descending)
+    elif sorting == Sorting.by_title:
+        challenges.sort(key=lambda x: x.title, reverse=sorting_order == SortingOrder.descending)
+    elif sorting == Sorting.by_authors:
+        challenges.sort(key=lambda x: ", ".join(x.authors), reverse=sorting_order == SortingOrder.descending)
+    elif sorting == Sorting.by_tags:
+        challenges.sort(key=lambda x: ", ".join(x.tags), reverse=sorting_order == SortingOrder.descending)
 
     table = Table(box=box.ROUNDED)
     table.add_column("Title")
