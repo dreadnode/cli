@@ -53,6 +53,7 @@ class Client:
         cookies: dict[str, str] | None = None,
         debug: bool = DEBUG,
     ):
+        self._debug = debug
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(
             cookies=cookies,
@@ -216,6 +217,26 @@ class Client:
 
         response = self.request("POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag})
         return bool(response.json().get("correct", False))
+
+    def query_challenge(self, challenge: str, data: str) -> t.Any:
+        """Query a challenge."""
+
+        # we need to create a new client because the base URL is different
+        challenge_url = self._base_url.replace("//", f"//{challenge}.")
+        query_client = httpx.Client(
+            cookies=self._client.cookies,
+            headers=self._client.headers,
+            base_url=challenge_url,
+            timeout=30,
+        )
+
+        print(self._client.cookies)
+
+        if self._debug:
+            query_client.event_hooks["request"].append(self._log_request)
+            query_client.event_hooks["response"].append(self._log_response)
+
+        return query_client.request("POST", "/score", json=json.loads(data))
 
     # Strikes
 

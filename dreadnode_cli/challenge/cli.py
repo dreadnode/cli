@@ -100,6 +100,18 @@ def artifact(
     print(f":floppy_disk: Saved to [bold]{file_path}[/]")
 
 
+@cli.command(help="Interact with a challenge")
+@pretty_cli
+def query(
+    challenge: t.Annotated[str, typer.Argument(help="Challenge name")],
+    data: t.Annotated[str, typer.Argument(help="The data to send.")],
+) -> None:
+    print(f":eye:  querying challenge [bold]{challenge}[/] with '{data}' ...")
+
+    response = api.create_client().query_challenge(challenge, data)
+    print(response)
+
+
 @cli.command(help="Submit a flag to a challenge")
 @pretty_cli
 def submit_flag(
