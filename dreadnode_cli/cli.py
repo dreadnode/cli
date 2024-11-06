@@ -97,3 +97,20 @@ def refresh() -> None:
     print(
         f":white_check_mark: Refreshed '[bold]{user_config.active}[/bold]' ([magenta]{user.email_address}[/] / [cyan]{user.username}[/])"
     )
+
+
+@cli.command(help="Show versions and exit.")
+@pretty_cli
+def version() -> None:
+    import importlib.metadata
+    import sys
+
+    version = importlib.metadata.version("dreadnode-cli")
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    import platform
+
+    os_name = platform.system()
+    arch = platform.machine()
+    print(f"Platform:      {os_name} ({arch})")
+    print(f"Python:        {python_version}")
+    print(f"Dreadnode CLI: {version}")
