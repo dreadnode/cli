@@ -114,3 +114,32 @@ def test_get_registry() -> None:
     # Test localhost registry
     config = _create_test_server_config("http://localhost:8000")
     assert docker.get_registry(config) == "localhost:5000"
+
+
+def test_get_registry_without_schema() -> None:
+    # Test without schema
+    config = _create_test_server_config("crucible.dreadnode.io")
+    assert docker.get_registry(config) == "registry.dreadnode.io"
+
+    config = _create_test_server_config("staging-crucible.dreadnode.io")
+    assert docker.get_registry(config) == "staging-registry.dreadnode.io"
+
+    config = _create_test_server_config("dev-crucible.dreadnode.io")
+    assert docker.get_registry(config) == "dev-registry.dreadnode.io"
+
+    config = _create_test_server_config("localhost:8000")
+    assert docker.get_registry(config) == "localhost:5000"
+
+
+def test_get_registry_custom_platform_base_domain() -> None:
+    # Test custom platform base domain
+    config = _create_test_server_config("crucible.example.com")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("dreadnode_cli.agent.docker.PLATFORM_BASE_DOMAIN", "example.com")
+        assert docker.get_registry(config) == "registry.example.com"
+
+        config = _create_test_server_config("staging-crucible.example.com")
+        assert docker.get_registry(config) == "staging-registry.example.com"
+
+        config = _create_test_server_config("dev-crucible.example.com")
+        assert docker.get_registry(config) == "dev-registry.example.com"

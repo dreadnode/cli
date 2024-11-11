@@ -8,6 +8,7 @@ from rich.live import Live
 from rich.text import Text
 
 from dreadnode_cli.config import ServerConfig
+from dreadnode_cli.defaults import DOCKER_REGISTRY_SUBDOMAIN, PLATFORM_BASE_DOMAIN
 
 try:
     client = docker.from_env()
@@ -15,24 +16,22 @@ except docker.errors.DockerException:
     client = None
 
 
-# TODO: Poor form having a fixed list of registries IMO
 def get_registry(config: ServerConfig) -> str:
     # fail early if docker is not available
     if client is None:
         raise Exception("Docker not available")
 
-    if config.url.startswith("https://crucible.dreadnode.io"):
-        return "registry.dreadnode.io"
-    elif config.url.startswith("https://staging-crucible.dreadnode.io"):
-        return "staging-registry.dreadnode.io"
-    elif config.url.startswith("https://dev-crucible.dreadnode.io"):
-        return "dev-registry.dreadnode.io"
-    elif config.url.startswith("https://dev-crucible.dreadnode.io"):
-        return "dev-registry.dreadnode.io"
-    elif "localhost" in config.url:
+    # localhost is a special case
+    if "localhost" in config.url or "127.0.0.1" in config.url:
         return "localhost:5000"
 
-    raise Exception(f"Unknown registry for {config.url}")
+    prefix = ""
+    if "staging-" in config.url:
+        prefix = "staging-"
+    elif "dev-" in config.url:
+        prefix = "dev-"
+
+    return f"{prefix}{DOCKER_REGISTRY_SUBDOMAIN}.{PLATFORM_BASE_DOMAIN}"
 
 
 def login(registry: str, username: str, password: str) -> None:

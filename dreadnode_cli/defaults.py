@@ -7,8 +7,13 @@ import pathlib
 
 # enable debugging
 DEBUG = bool(os.getenv("DREADNODE_DEBUG")) or False
+
+# default platform domain
+PLATFORM_BASE_DOMAIN = "dreadnode.io"
 # default server URL
-PLATFORM_BASE_URL = os.getenv("DREADNODE_SERVER", "https://crucible.dreadnode.io")
+PLATFORM_BASE_URL = os.getenv("DREADNODE_SERVER", f"https://crucible.{PLATFORM_BASE_DOMAIN}")
+# default docker registry subdomain
+DOCKER_REGISTRY_SUBDOMAIN = "registry"
 # path to the user configuration file
 USER_CONFIG_PATH = pathlib.Path(
     # allow overriding the user config file via env variable
