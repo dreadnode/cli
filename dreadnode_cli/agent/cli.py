@@ -280,6 +280,11 @@ def runs(
     client = api.create_client()
     runs = [run for run in client.list_strike_runs() if run.id in active_link.runs and run.start is not None]
     runs = sorted(runs, key=lambda r: r.start or 0, reverse=True)
+
+    if not runs:
+        print(":exclamation: No runs yet, use [bold]dreadnode agent deploy[/]")
+        return
+
     print(format_runs(runs))
 
 
