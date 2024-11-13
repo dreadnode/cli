@@ -96,6 +96,7 @@ dreadnode agent strikes
 
 # initialize a new agent in the current directory
 dreadnode agent init <strike_id>
+
 # initialize a new agent in the specified directory
 dreadnode agent init <strike_id> --dir <directory>
 
