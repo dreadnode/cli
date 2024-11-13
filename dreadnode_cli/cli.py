@@ -12,7 +12,11 @@ from dreadnode_cli.defaults import PLATFORM_BASE_URL
 from dreadnode_cli.profile import cli as profile_cli
 from dreadnode_cli.utils import pretty_cli
 
-cli = typer.Typer(no_args_is_help=True, help="Interact with the Dreadnode platform")
+cli = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="Interact with the Dreadnode platform",
+)
 
 cli.add_typer(profile_cli, name="profile", help="Manage server profiles")
 cli.add_typer(challenge_cli, name="challenge", help="Interact with Crucible challenges")
