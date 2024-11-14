@@ -22,8 +22,9 @@ def get_registry(config: ServerConfig) -> str:
         raise Exception("Docker not available")
 
     # localhost is a special case
+    # TODO: Can we get this port dynamically?
     if "localhost" in config.url or "127.0.0.1" in config.url:
-        return "localhost:5000"
+        return "localhost:5005"
 
     prefix = ""
     if "staging-" in config.url:

@@ -256,6 +256,7 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
     table.add_row("type", run.strike_type)
 
     table.add_row("", "")
+    table.add_row("model", run.model or "<default>")
     table.add_row("agent", f"[bold magenta]{run.agent_key}[/] ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
     table.add_row("notes", run.agent_version.notes or "-")

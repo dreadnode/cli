@@ -113,7 +113,7 @@ def test_get_registry() -> None:
 
     # Test localhost registry
     config = _create_test_server_config("http://localhost:8000")
-    assert docker.get_registry(config) == "localhost:5000"
+    assert docker.get_registry(config) == "localhost:5005"
 
 
 def test_get_registry_without_schema() -> None:
@@ -128,7 +128,7 @@ def test_get_registry_without_schema() -> None:
     assert docker.get_registry(config) == "dev-registry.dreadnode.io"
 
     config = _create_test_server_config("localhost:8000")
-    assert docker.get_registry(config) == "localhost:5000"
+    assert docker.get_registry(config) == "localhost:5005"
 
 
 def test_get_registry_custom_platform_base_domain() -> None:
