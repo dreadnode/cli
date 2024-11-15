@@ -3,6 +3,7 @@ import json
 import time
 import typing as t
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
@@ -53,9 +54,20 @@ class Client:
         cookies: dict[str, str] | None = None,
         debug: bool = DEBUG,
     ):
+        _cookies = httpx.Cookies()
+        cookie_domain = urlparse(base_url).hostname
+        if cookie_domain is None:
+            raise Exception(f"Invalid URL: {base_url}")
+
+        if "localhost" == cookie_domain:
+            cookie_domain = "localhost.local"
+
+        for key, value in (cookies or {}).items():
+            _cookies.set(key, value, domain=cookie_domain)
+
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(
-            cookies=cookies,
+            cookies=_cookies,
             headers={
                 "User-Agent": f"dreadnode-cli/{__version__}",
                 "Accept": "application/json",
@@ -401,7 +413,8 @@ def create_client(*, profile: str | None = None) -> Client:
 
     user_config = UserConfig.read()
     config = user_config.get_server_config(profile)
-    client = Client(config.url, cookies={"refresh_token": config.refresh_token, "access_token": config.access_token})
+
+    client = Client(config.url, cookies={"access_token": config.access_token, "refresh_token": config.refresh_token})
 
     # Pre-emptively check if the token is expired
     if Token(config.refresh_token).is_expired():
@@ -410,13 +423,8 @@ def create_client(*, profile: str | None = None) -> Client:
     def _flush_auth_changes() -> None:
         """Flush the authentication data to disk if it has been updated."""
 
-        # Weird hack to get around the fact that httpx assigns
-        # a strange domain name for localhost requests that cause
-        # conflict errors if we try to get the cookies directly
-
-        cookies = list(client._client.cookies.jar)
-        access_token = next((cookie.value for cookie in reversed(cookies) if cookie.name == "access_token"), None)
-        refresh_token = next((cookie.value for cookie in reversed(cookies) if cookie.name == "refresh_token"), None)
+        access_token = client._client.cookies.get("access_token")
+        refresh_token = client._client.cookies.get("refresh_token")
 
         changed: bool = False
         if access_token and access_token != config.access_token:
