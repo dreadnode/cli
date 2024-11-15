@@ -17,6 +17,26 @@ def test_client_init_strips_trailing_slash() -> None:
     assert client._base_url == "http://test.com"
 
 
+def test_client_init_raises_on_invalid_url() -> None:
+    with pytest.raises(Exception, match="Invalid URL: invalid"):
+        api.Client("invalid")
+
+
+def test_client_init_sets_cookie_for_localhost_domain() -> None:
+    client = api.Client("http://localhost", cookies={"session": "123"})
+    assert client._client.cookies.get("session", None, domain="localhost.local") == "123"
+
+
+def test_client_init_sets_cookie_for_non_localhost_domain() -> None:
+    client = api.Client("http://example.com", cookies={"session": "123"})
+    assert client._client.cookies.get("session", None, domain="example.com") == "123"
+
+
+def test_client_init_does_not_set_cookie_for_other_domain() -> None:
+    client = api.Client("http://example.com", cookies={"session": "123"})
+    assert client._client.cookies.get("session", None, domain="other.com") is None
+
+
 def test_get_error_message_json() -> None:
     client = api.Client()
     response = httpx.Response(
