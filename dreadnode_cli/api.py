@@ -51,9 +51,20 @@ class Client:
         self,
         base_url: str = PLATFORM_BASE_URL,
         *,
-        cookies: httpx.Cookies | None = None,
+        cookies: dict[str, str] | None = None,
         debug: bool = DEBUG,
     ):
+        _cookies = httpx.Cookies()
+        cookie_domain = urlparse(base_url).hostname
+        if cookie_domain is None:
+            raise Exception(f"Invalid URL: {base_url}")
+
+        if "localhost" == cookie_domain:
+            cookie_domain = "localhost.local"
+
+        for key, value in (cookies or {}).items():
+            _cookies.set(key, value, domain=cookie_domain)
+
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(
             cookies=cookies,
@@ -403,18 +414,7 @@ def create_client(*, profile: str | None = None) -> Client:
     user_config = UserConfig.read()
     config = user_config.get_server_config(profile)
 
-    cookie_domain = urlparse(config.url).hostname
-    if cookie_domain is None:
-        raise Exception(f"Invalid URL: {config.url}")
-
-    if "localhost" == cookie_domain:
-        cookie_domain = "localhost.local"
-
-    cookies = httpx.Cookies()
-    cookies.set("refresh_token", config.refresh_token, domain=cookie_domain)
-    cookies.set("access_token", config.access_token, domain=cookie_domain)
-
-    client = Client(config.url, cookies=cookies)
+    client = Client(config.url, cookies={"access_token": config.access_token, "refresh_token": config.refresh_token})
 
     # Pre-emptively check if the token is expired
     if Token(config.refresh_token).is_expired():
