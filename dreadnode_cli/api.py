@@ -67,7 +67,7 @@ class Client:
 
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(
-            cookies=cookies,
+            cookies=_cookies,
             headers={
                 "User-Agent": f"dreadnode-cli/{__version__}",
                 "Accept": "application/json",
