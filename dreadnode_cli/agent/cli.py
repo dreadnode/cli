@@ -103,8 +103,10 @@ def push(
         raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
 
     if not agent_config.is_linked_to_profile(user_config.active_profile_name):
+        linked_profiles = ", ".join(agent_config.linked_profiles)
+        plural = "s" if len(agent_config.linked_profiles) > 1 else ""
         raise Exception(
-            f"This agent is linked to the [magenta]{", ".join(agent_config.linked_profiles)}[/] server profile{'s' if len(agent_config.linked_profiles) > 1 else ''}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
+            f"This agent is linked to the [magenta]{linked_profiles}[/] server profile{plural}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
         )
 
     server_config = user_config.get_server_config()
