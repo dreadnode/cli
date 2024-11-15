@@ -97,7 +97,14 @@ def push(
     env = {env_var.split("=")[0]: env_var.split("=")[1] for env_var in env_vars or []}
 
     agent_config = AgentConfig.read(directory)
-    server_config = UserConfig.read().get_server_config()
+    user_config = UserConfig.read()
+
+    if not agent_config.is_linked_to_profile(user_config.active_profile_name):
+        raise Exception(
+            f"This agent is linked to the [magenta]{", ".join(agent_config.linked_profiles)}[/] server profile{'s' if len(agent_config.linked_profiles) > 1 else ''}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
+        )
+
+    server_config = user_config.get_server_config()
 
     registry = get_registry(server_config)
 
@@ -124,7 +131,7 @@ def push(
         notes = notes or Prompt.ask("Notes?")
 
         agent = client.create_strike_agent(container, name, strike=agent_config.strike, notes=notes)
-        agent_config.add_link(agent.key, agent.id).write(directory)
+        agent_config.add_link(agent.key, agent.id, user_config.active_profile_name).write(directory)
     else:
         active_agent_id = agent_config.active
         if active_agent_id is None:
