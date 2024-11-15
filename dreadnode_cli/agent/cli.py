@@ -134,7 +134,16 @@ def push(
         print(":robot: Creating a new version ...")
         notes = notes or Prompt.ask("Notes?")
 
-        agent = client.create_strike_agent_version(str(active_agent_id), container, notes)
+        try:
+            agent = client.create_strike_agent_version(str(active_agent_id), container, notes)
+        except Exception as e:
+            # 404 is expected if the agent was created on a different server profile
+            if str(e).startswith("404"):
+                raise Exception(
+                    f"Agent '{active_agent_id}' not found for the current server profile, create the agent again."
+                ) from e
+            else:
+                raise e
 
     print(format_agent(agent))
 
