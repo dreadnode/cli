@@ -14,6 +14,11 @@ PLATFORM_BASE_DOMAIN = "dreadnode.io"
 PLATFORM_BASE_URL = os.getenv("DREADNODE_SERVER", f"https://crucible.{PLATFORM_BASE_DOMAIN}")
 # default docker registry subdomain
 DOCKER_REGISTRY_SUBDOMAIN = "registry"
+# default docker registry local port
+DOCKER_REGISTRY_LOCAL_PORT = 5005
+# default docker registry image tag
+DOCKER_REGISTRY_IMAGE_TAG = "registry"
+
 # path to the user configuration file
 USER_CONFIG_PATH = pathlib.Path(
     # allow overriding the user config file via env variable
