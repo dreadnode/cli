@@ -51,7 +51,7 @@ class UserConfig(pydantic.BaseModel):
             YAML().dump(self.model_dump(mode="json"), f)
 
     @property
-    def active_profile_name(self) -> str:
+    def active_profile_name(self) -> str | None:
         """Get the name of the active profile."""
         self._update_active()
         return self.active

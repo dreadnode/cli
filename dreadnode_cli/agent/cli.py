@@ -99,6 +99,9 @@ def push(
     agent_config = AgentConfig.read(directory)
     user_config = UserConfig.read()
 
+    if not user_config.active_profile_name:
+        raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
+
     if not agent_config.is_linked_to_profile(user_config.active_profile_name):
         raise Exception(
             f"This agent is linked to the [magenta]{", ".join(agent_config.linked_profiles)}[/] server profile{'s' if len(agent_config.linked_profiles) > 1 else ''}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
