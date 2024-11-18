@@ -100,11 +100,14 @@ Interact with Strike agents:
 # list all strikes
 dreadnode agent strikes
 
+# list all available templates with their descriptions
+dreadnode agent templates
+
 # initialize a new agent in the current directory
-dreadnode agent init <strike_id>
+dreadnode agent init -t <template_name> <strike_id> 
 
 # initialize a new agent in the specified directory
-dreadnode agent init <strike_id> --dir <directory>
+dreadnode agent init -t <template_name> <strike_id> --dir <directory>
 
 # push a new version of the agent
 dreadnode agent push

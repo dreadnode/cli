@@ -9,6 +9,7 @@ from rich.table import Table
 from rich.text import Text
 
 from dreadnode_cli import api
+from dreadnode_cli.agent.templates import Template, template_description
 
 P = t.ParamSpec("P")
 
@@ -292,5 +293,16 @@ def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableTy
             format_time(run.start),
             Text(format_duration(run.start, run.end), style="bold cyan"),
         )
+
+    return table
+
+
+def format_templates() -> RenderableType:
+    table = Table(box=box.ROUNDED)
+    table.add_column("template")
+    table.add_column("description")
+
+    for template in Template:
+        table.add_row(f"[bold magenta]{template.value}[/]", template_description(template))
 
     return table

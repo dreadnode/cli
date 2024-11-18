@@ -1,0 +1,1 @@
+Rigging template with scaffolding for a basic agent.

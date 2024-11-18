@@ -19,12 +19,19 @@ from dreadnode_cli.agent.format import (
     format_run,
     format_runs,
     format_strikes,
+    format_templates,
 )
-from dreadnode_cli.agent.templates import TEMPLATES_DIR, Template
+from dreadnode_cli.agent.templates import Template, install_template
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import copy_template, pretty_cli
+from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
+
+
+@cli.command(help="List all available templates with their descriptions")
+@pretty_cli
+def templates() -> None:
+    print(format_templates())
 
 
 @cli.command(help="Initialize a new agent project")
@@ -39,8 +46,8 @@ def init(
         str | None, typer.Option("--name", "-n", help="The project name (used for container naming)")
     ] = None,
     template: t.Annotated[
-        Template, typer.Option("--template", "-t", help="The template to use for the agent")  # type: ignore
-    ] = Template.rigging,
+        Template, typer.Option("--template", "-t", help="The template to use for the agent")
+    ] = Template.rigging_basic,
 ) -> None:
     client = api.create_client()
 
@@ -66,7 +73,8 @@ def init(
         pass
 
     AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
-    copy_template(TEMPLATES_DIR / template.value, directory, {"project_name": project_name})
+
+    install_template(template, directory, {"project_name": project_name})
 
     print()
     print(f"Initialized [b]{directory}[/]")
