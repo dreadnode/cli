@@ -1,4 +1,3 @@
-import enum
 import pathlib
 import time
 import typing as t
@@ -21,17 +20,11 @@ from dreadnode_cli.agent.format import (
     format_runs,
     format_strikes,
 )
+from dreadnode_cli.agent.templates import TEMPLATES_DIR, Template
 from dreadnode_cli.config import UserConfig
 from dreadnode_cli.utils import copy_template, pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
-
-
-class Template(str, enum.Enum):
-    rigging = "rigging"
-
-
-TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
 
 
 @cli.command(help="Initialize a new agent project")
@@ -46,7 +39,7 @@ def init(
         str | None, typer.Option("--name", "-n", help="The project name (used for container naming)")
     ] = None,
     template: t.Annotated[
-        Template, typer.Option("--template", "-t", help="The template to use for the agent")
+        Template, typer.Option("--template", "-t", help="The template to use for the agent")  # type: ignore
     ] = Template.rigging,
 ) -> None:
     client = api.create_client()
