@@ -231,7 +231,9 @@ class Client:
 
     # Strikes
 
-    StrikeRunStatus = t.Literal["pending", "deploying", "running", "completed", "timeout", "failed"]
+    StrikeRunStatus = t.Literal[
+        "pending", "deploying", "running", "completed", "mixed", "terminated", "timeout", "failed"
+    ]
 
     class StrikeModel(BaseModel):
         key: str
