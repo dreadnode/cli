@@ -50,6 +50,12 @@ class UserConfig(pydantic.BaseModel):
         with USER_CONFIG_PATH.open("w") as f:
             YAML().dump(self.model_dump(mode="json"), f)
 
+    @property
+    def active_profile_name(self) -> str | None:
+        """Get the name of the active profile."""
+        self._update_active()
+        return self.active
+
     def get_server_config(self, profile: str | None = None) -> ServerConfig:
         """Get the server configuration for the given profile or None if not set."""
 

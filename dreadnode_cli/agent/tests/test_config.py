@@ -21,11 +21,15 @@ def test_agent_config_add_link() -> None:
     config = AgentConfig(project_name="test")
     id = UUID("00000000-0000-0000-0000-000000000000")
 
-    config.add_link("test", id)
+    config.add_link("test", id, "test")
 
     assert config.active == "test"
     assert config.links["test"].id == id
     assert config.links["test"].runs == []
+    assert config.links["test"].profile == "test"
+    assert config.linked_profiles == ["test"]
+    assert config.is_linked_to_profile("test")
+    assert not config.is_linked_to_profile("other")
 
 
 def test_agent_config_add_run() -> None:
@@ -33,7 +37,7 @@ def test_agent_config_add_run() -> None:
     agent_id = UUID("00000000-0000-0000-0000-000000000000")
     run_id = UUID("11111111-1111-1111-1111-111111111111")
 
-    config.add_link("test", agent_id)
+    config.add_link("test", agent_id, "test")
     config.add_run(run_id)
 
     assert config.links["test"].runs == [run_id]
@@ -44,7 +48,7 @@ def test_agent_config_write_read(tmp_path: Path) -> None:
     agent_id = UUID("00000000-0000-0000-0000-000000000000")
     run_id = UUID("11111111-1111-1111-1111-111111111111")
 
-    config.add_link("test", agent_id)
+    config.add_link("test", agent_id, "test")
     config.add_run(run_id)
     config.write(tmp_path)
 
@@ -53,6 +57,7 @@ def test_agent_config_write_read(tmp_path: Path) -> None:
     assert loaded.active == "test"
     assert loaded.links["test"].id == agent_id
     assert loaded.links["test"].runs == [run_id]
+    assert loaded.links["test"].profile == "test"
 
 
 def test_agent_config_update_active() -> None:
@@ -61,11 +66,11 @@ def test_agent_config_update_active() -> None:
     id2 = UUID("11111111-1111-1111-1111-111111111111")
 
     # Add first link
-    config.add_link("test1", id1)
+    config.add_link("test1", id1, "test1")
     assert config.active == "test1"
 
     # Add second link
-    config.add_link("test2", id2)
+    config.add_link("test2", id2, "test2")
     assert config.active == "test2"
 
     # Remove active link
