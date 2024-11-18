@@ -103,7 +103,7 @@ def push(
     if not user_config.active_profile_name:
         raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
 
-    if not agent_config.is_linked_to_profile(user_config.active_profile_name):
+    if agent_config.links and not agent_config.is_linked_to_profile(user_config.active_profile_name):
         linked_profiles = ", ".join(agent_config.linked_profiles)
         plural = "s" if len(agent_config.linked_profiles) > 1 else ""
         raise Exception(
