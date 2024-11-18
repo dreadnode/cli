@@ -8,7 +8,7 @@ COPY task.yml .
 
 CMD [ \
     # the generator to use
-    "-G", "http://dropship:8080/v1", \
+    "-G", "http://dropship/v1", \
     # the task file
     "-Ttask.yml", \
     # openai tool calling json format does not support example payloads, so force our own XML format
