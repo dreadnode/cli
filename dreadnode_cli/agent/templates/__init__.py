@@ -11,6 +11,7 @@ TEMPLATES_DIR = pathlib.Path(__file__).parent.parent / "templates"
 class Template(str, enum.Enum):
     rigging_basic = "rigging_basic"
     rigging_loop = "rigging_loop"
+    nerve_basic = "nerve_basic"
 
 
 def template_description(template: Template) -> str:
