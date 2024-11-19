@@ -259,6 +259,7 @@ class Client:
     class StrikeZone(BaseModel):
         key: str
         name: str
+        guidance: str | None
         description: str | None
 
     class StrikeSummaryResponse(BaseModel):
@@ -273,6 +274,7 @@ class Client:
     class StrikeResponse(StrikeSummaryResponse):
         zones: list["Client.StrikeZone"]
         guidance: str | None
+        description: str | None
 
     class Container(BaseModel):
         image: str

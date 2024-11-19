@@ -61,7 +61,7 @@ def init(
 
     print()
     project_name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template))
+    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
 
     directory.mkdir(exist_ok=True)
 
@@ -74,7 +74,7 @@ def init(
 
     AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
 
-    install_template(template, directory, {"project_name": project_name, "guidance": strike_response.guidance or ""})
+    install_template(template, directory, {"project_name": project_name, "strike": strike_response})
 
     print()
     print(f"Initialized [b]{directory}[/]")

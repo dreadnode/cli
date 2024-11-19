@@ -15,7 +15,15 @@ guidance:
   - Continue providing commands and processing outputs until you believe you have completed the task.
   - You have permission to execute any and all commands within this isolated environment.
 
-prompt: {{ guidance }}
+prompt: |
+  {{ strike.guidance }}
+  {% if strike.zones is defined and strike.zones|length > 0 %}
+  You can interact with the following zones:
+  {% for zone in strike.zones %}
+    {{ zone.name }}: {{ zone.guidance }}
+  {% endfor %}
+  {% endif %}
+
 
 functions:
   - name: Environment
