@@ -232,7 +232,23 @@ class Client:
     # Strikes
 
     StrikeRunStatus = t.Literal[
-        "pending", "deploying", "running", "completed", "mixed", "terminated", "timeout", "failed"
+        "pending",  # Waiting to be processed in the DB
+        "deploying",  # Dropship pod is being created and configured
+        "running",  # Dropship pod is actively executing
+        "completed",  # All zones finished successfully
+        "mixed",  # Some zones succeeded, others terminated
+        "terminated",  # All zones ended with non-zero exit codes
+        "timeout",  # Maximum allowed run time was exceeded
+        "failed",  # System/infrastructure error occurred
+    ]
+    StrikeRunZoneStatus = t.Literal[
+        "pending",  # Waiting to be processed in the DB
+        "deploying",  # Dropship is creating the zone resources
+        "running",  # Zone pods are actively executing
+        "completed",  # Agent completed successfully (exit code 0)
+        "terminated",  # Agent ended with non-zero exit code
+        "timeout",  # Maximum allowed run time was exceeded
+        "failed",  # System/infrastructure error occurred
     ]
 
     class StrikeModel(BaseModel):
@@ -276,7 +292,7 @@ class Client:
         key: str
         name: str | None
         created_at: datetime
-        latest_run_status: t.Optional["Client.StrikeRunStatus"]
+        latest_run_status: "Client.StrikeRunStatus | None"
         latest_run_id: UUID | None
         versions: list["Client.StrikeAgentVersion"]
         latest_version: "Client.StrikeAgentVersion"
@@ -289,7 +305,7 @@ class Client:
         key: str
         name: str | None
         created_at: datetime
-        latest_run_status: t.Optional["Client.StrikeRunStatus"]
+        latest_run_status: "Client.StrikeRunStatus | None"
         latest_run_id: UUID | None
         latest_version: "Client.StrikeAgentVersion"
         revision: int
@@ -299,23 +315,30 @@ class Client:
         explanation: str | None = None
         metadata: dict[str, t.Any] = {}
 
-    class StrikeRunOutput(BaseModel):
-        data: dict[str, t.Any]
+    class StrikeRunOutputSummary(BaseModel):
         score: t.Optional["Client.StrikeRunOutputScore"] = None
         metadata: dict[str, t.Any] = {}
 
-    class StrikeRunZone(BaseModel):
+    class StrikeRunOutput(StrikeRunOutputSummary):
+        data: dict[str, t.Any]
+
+    class _StrikeRunZone(BaseModel):
         id: UUID
         key: str
-        status: "Client.StrikeRunStatus"
+        status: "Client.StrikeRunZoneStatus"
         start: datetime | None
         end: datetime | None
+
+    class StrikeRunZoneSummary(_StrikeRunZone):
+        outputs: list["Client.StrikeRunOutputSummary"]
+
+    class StrikeRunZone(_StrikeRunZone):
         agent_logs: str | None
         container_logs: dict[str, str]
         outputs: list["Client.StrikeRunOutput"]
         inferences: list[dict[str, t.Any]]
 
-    class StrikeRunSummaryResponse(BaseModel):
+    class _StrikeRun(BaseModel):
         id: UUID
         strike_id: UUID
         strike_key: str
@@ -331,7 +354,10 @@ class Client:
         start: datetime | None
         end: datetime | None
 
-    class StrikeRunResponse(StrikeRunSummaryResponse):
+    class StrikeRunSummaryResponse(_StrikeRun):
+        zones: list["Client.StrikeRunZoneSummary"]
+
+    class StrikeRunResponse(_StrikeRun):
         zones: list["Client.StrikeRunZone"]
 
     def get_strike(self, strike: str) -> StrikeResponse:

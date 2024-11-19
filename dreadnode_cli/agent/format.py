@@ -14,12 +14,14 @@ from dreadnode_cli.agent.templates import Template, template_description
 P = t.ParamSpec("P")
 
 
-def get_status_style(status: str | None) -> str:
+def get_status_style(status: api.Client.StrikeRunStatus | api.Client.StrikeRunZoneStatus | None) -> str:
     return (
         {
             "pending": "dim",
             "running": "bold cyan",
             "completed": "bold green",
+            "mixed": "bold gold3",
+            "terminated": "bold dark_orange3",
             "failed": "bold red",
             "timeout": "bold yellow",
         }.get(status, "")
