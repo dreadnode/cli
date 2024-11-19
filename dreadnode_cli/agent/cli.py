@@ -61,7 +61,7 @@ def init(
 
     print()
     project_name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template))
+    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
 
     directory.mkdir(exist_ok=True)
 
