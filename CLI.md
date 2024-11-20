@@ -90,6 +90,7 @@ $ dreadnode agent init [OPTIONS] STRIKE
 * `-n, --name TEXT`: The project name (used for container naming)
 * `-t, --template [rigging_basic|rigging_loop|nerve_basic]`: The template to use for the agent  [default: rigging_basic]
 * `--source TEXT`: Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder
+* `--source-branch TEXT`: If --source is a github repository, use this as the branch name  [default: main]
 * `--help`: Show this message and exit.
 
 ### `dreadnode agent latest`

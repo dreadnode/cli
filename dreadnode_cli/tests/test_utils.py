@@ -104,6 +104,14 @@ def test_normalize_template_source_custom_zip_url() -> None:
     assert normalize_template_source(url) == url
 
 
+def test_normalize_template_source_custom_branch() -> None:
+    # Test with custom branch name
+    url = "user/repo"
+    branch = "develop"
+    expected = "https://github.com/user/repo/archive/refs/heads/develop.zip"
+    assert normalize_template_source(url, branch) == expected
+
+
 def test_download_and_unzip_archive_success(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # create a mock zip file with test content
     test_file_content = b"test content"

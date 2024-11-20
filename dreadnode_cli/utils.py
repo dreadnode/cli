@@ -67,7 +67,7 @@ def parse_jwt_token_expiration(token: str) -> datetime:
     return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
 
-def normalize_template_source(source: str) -> str:
+def normalize_template_source(source: str, source_branch: str = "main") -> str:
     """Normalize a template source to a ZIP archive URL."""
 
     # github repository / ZIP archive URL
@@ -77,7 +77,7 @@ def normalize_template_source(source: str) -> str:
 
     if not source.lower().endswith(".zip"):
         # normalize to ZIP archive URL
-        source = f"{source}/archive/refs/heads/main.zip"
+        source = f"{source}/archive/refs/heads/{source_branch}.zip"
 
     return source
 

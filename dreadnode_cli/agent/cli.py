@@ -56,6 +56,13 @@ def init(
             help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
         ),
     ] = None,
+    source_branch: t.Annotated[
+        str,
+        typer.Option(
+            "--source-branch",
+            help="If --source is a github repository, use this as the branch name",
+        ),
+    ] = "main",
 ) -> None:
     print(f":coffee: Fetching strike '{strike}' ...")
 
@@ -100,7 +107,7 @@ def init(
             # - full github repository URL
             # - full ZIP archive URL
             # - username/repo
-            source = normalize_template_source(source)
+            source = normalize_template_source(source, source_branch)
             # download and unzip to a temporary directory
             source_dir = download_and_unzip_archive(source)
             # make sure the temporary directory is cleaned up
