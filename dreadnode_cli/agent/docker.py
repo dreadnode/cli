@@ -8,12 +8,34 @@ from rich.live import Live
 from rich.text import Text
 
 from dreadnode_cli.config import ServerConfig
-from dreadnode_cli.defaults import DOCKER_REGISTRY_SUBDOMAIN, PLATFORM_BASE_DOMAIN
+from dreadnode_cli.defaults import (
+    DOCKER_REGISTRY_IMAGE_TAG,
+    DOCKER_REGISTRY_LOCAL_PORT,
+    DOCKER_REGISTRY_SUBDOMAIN,
+    PLATFORM_BASE_DOMAIN,
+)
 
 try:
     client = docker.from_env()
 except docker.errors.DockerException:
     client = None
+
+
+def get_local_registry_port() -> int:
+    if client is None:
+        raise Exception("Docker not available")
+
+    for container in client.containers.list():
+        if DOCKER_REGISTRY_IMAGE_TAG in container.image.tags:
+            ports = container.attrs["NetworkSettings"]["Ports"]
+            assert len(ports) == 1
+            for _container_port, port_bindings in ports.items():
+                if port_bindings:
+                    for binding in port_bindings:
+                        return int(binding["HostPort"])
+
+    # fallback to the default port if we can't find the running container
+    return DOCKER_REGISTRY_LOCAL_PORT
 
 
 def get_registry(config: ServerConfig) -> str:
@@ -23,7 +45,7 @@ def get_registry(config: ServerConfig) -> str:
 
     # localhost is a special case
     if "localhost" in config.url or "127.0.0.1" in config.url:
-        return "localhost:5005"
+        return f"localhost:{get_local_registry_port()}"
 
     prefix = ""
     if "staging-" in config.url:

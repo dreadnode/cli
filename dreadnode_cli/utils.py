@@ -1,14 +1,11 @@
 import base64
 import functools
 import json
-import pathlib
 import sys
 import typing as t
 from datetime import datetime
 
-from jinja2 import Environment, FileSystemLoader
 from rich import print
-from rich.prompt import Prompt
 
 from dreadnode_cli.defaults import DEBUG
 
@@ -63,22 +60,3 @@ def parse_jwt_token_expiration(token: str) -> datetime:
     _, b64payload, _ = token.split(".")
     payload = base64.urlsafe_b64decode(b64payload + "==").decode("utf-8")
     return datetime.fromtimestamp(json.loads(payload).get("exp"))
-
-
-def copy_template(src: pathlib.Path, dest: pathlib.Path, context: dict[str, t.Any]) -> None:
-    env = Environment(loader=FileSystemLoader(src))
-
-    for src_item in src.iterdir():
-        dest_item = dest / src_item.name
-        content = src_item.read_text()
-
-        if src_item.name.endswith(".j2"):
-            template = env.get_template(src_item.name)
-            content = template.render(context)
-            dest_item = dest / src_item.name.removesuffix(".j2")
-
-        if dest_item.exists():
-            if Prompt.ask(f":axe: Overwrite {dest_item.name}?", choices=["y", "n"], default="n") == "n":
-                continue
-
-        dest_item.write_text(content)

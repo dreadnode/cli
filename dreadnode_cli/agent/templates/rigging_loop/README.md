@@ -1,0 +1,1 @@
+A more complex rigging template with state and agent loop.

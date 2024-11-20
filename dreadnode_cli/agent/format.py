@@ -9,16 +9,19 @@ from rich.table import Table
 from rich.text import Text
 
 from dreadnode_cli import api
+from dreadnode_cli.agent.templates import Template, template_description
 
 P = t.ParamSpec("P")
 
 
-def get_status_style(status: str | None) -> str:
+def get_status_style(status: api.Client.StrikeRunStatus | api.Client.StrikeRunZoneStatus | None) -> str:
     return (
         {
             "pending": "dim",
             "running": "bold cyan",
             "completed": "bold green",
+            "mixed": "bold gold3",
+            "terminated": "bold dark_orange3",
             "failed": "bold red",
             "timeout": "bold yellow",
         }.get(status, "")
@@ -256,6 +259,7 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
     table.add_row("type", run.strike_type)
 
     table.add_row("", "")
+    table.add_row("model", run.model or "<default>")
     table.add_row("agent", f"[bold magenta]{run.agent_key}[/] ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
     table.add_row("notes", run.agent_version.notes or "-")
@@ -291,5 +295,16 @@ def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableTy
             format_time(run.start),
             Text(format_duration(run.start, run.end), style="bold cyan"),
         )
+
+    return table
+
+
+def format_templates() -> RenderableType:
+    table = Table(box=box.ROUNDED)
+    table.add_column("template")
+    table.add_column("description")
+
+    for template in Template:
+        table.add_row(f"[bold magenta]{template.value}[/]", template_description(template))
 
     return table

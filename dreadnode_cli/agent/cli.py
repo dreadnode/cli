@@ -1,4 +1,3 @@
-import enum
 import pathlib
 import time
 import typing as t
@@ -20,18 +19,19 @@ from dreadnode_cli.agent.format import (
     format_run,
     format_runs,
     format_strikes,
+    format_templates,
 )
+from dreadnode_cli.agent.templates import Template, install_template
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import copy_template, pretty_cli
+from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
 
 
-class Template(str, enum.Enum):
-    rigging = "rigging"
-
-
-TEMPLATES_DIR = pathlib.Path(__file__).parent / "templates"
+@cli.command(help="List all available templates with their descriptions")
+@pretty_cli
+def templates() -> None:
+    print(format_templates())
 
 
 @cli.command(help="Initialize a new agent project")
@@ -47,7 +47,7 @@ def init(
     ] = None,
     template: t.Annotated[
         Template, typer.Option("--template", "-t", help="The template to use for the agent")
-    ] = Template.rigging,
+    ] = Template.rigging_basic,
 ) -> None:
     client = api.create_client()
 
@@ -61,7 +61,7 @@ def init(
 
     print()
     project_name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template))
+    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
 
     directory.mkdir(exist_ok=True)
 
@@ -73,7 +73,8 @@ def init(
         pass
 
     AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
-    copy_template(TEMPLATES_DIR / template.value, directory, {"project_name": project_name})
+
+    install_template(template, directory, {"project_name": project_name, "strike": strike_response})
 
     print()
     print(f"Initialized [b]{directory}[/]")
@@ -97,7 +98,19 @@ def push(
     env = {env_var.split("=")[0]: env_var.split("=")[1] for env_var in env_vars or []}
 
     agent_config = AgentConfig.read(directory)
-    server_config = UserConfig.read().get_server_config()
+    user_config = UserConfig.read()
+
+    if not user_config.active_profile_name:
+        raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
+
+    if agent_config.links and not agent_config.is_linked_to_profile(user_config.active_profile_name):
+        linked_profiles = ", ".join(agent_config.linked_profiles)
+        plural = "s" if len(agent_config.linked_profiles) > 1 else ""
+        raise Exception(
+            f"This agent is linked to the [magenta]{linked_profiles}[/] server profile{plural}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
+        )
+
+    server_config = user_config.get_server_config()
 
     registry = get_registry(server_config)
 
@@ -124,7 +137,7 @@ def push(
         notes = notes or Prompt.ask("Notes?")
 
         agent = client.create_strike_agent(container, name, strike=agent_config.strike, notes=notes)
-        agent_config.add_link(agent.key, agent.id).write(directory)
+        agent_config.add_link(agent.key, agent.id, user_config.active_profile_name).write(directory)
     else:
         active_agent_id = agent_config.active
         if active_agent_id is None:
@@ -134,7 +147,16 @@ def push(
         print(":robot: Creating a new version ...")
         notes = notes or Prompt.ask("Notes?")
 
-        agent = client.create_strike_agent_version(str(active_agent_id), container, notes)
+        try:
+            agent = client.create_strike_agent_version(str(active_agent_id), container, notes)
+        except Exception as e:
+            # 404 is expected if the agent was created on a different server profile
+            if str(e).startswith("404"):
+                raise Exception(
+                    f"Agent '{active_agent_id}' not found for the current server profile, create the agent again."
+                ) from e
+            else:
+                raise e
 
     print(format_agent(agent))
 
@@ -181,7 +203,7 @@ def deploy(
         return
 
     with Live(formatted, refresh_per_second=2) as live:
-        while run.status not in ["completed", "failed", "timeout"]:
+        while run.is_running():
             time.sleep(1)
             run = client.get_strike_run(run.id)
             live.update(format_run(run))

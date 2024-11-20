@@ -4,17 +4,23 @@ Dreadnode command line interface.
 
 ### With Poetry:
 
+This project is packaged for and meant to be used with the [Poetry package management tool](https://python-poetry.org/).
+
+To install the project dependencies:
+
 ```bash
 poetry install
 ```
 
-Then enter the poetry shell:
+And then enter its shell:
 
 ```bash
 poetry shell
 ```
 
 ### With Docker:
+
+Alternatively, you can build a docker image and run the CLI from a container:
 
 ```bash
 docker build -t dreadnode .
@@ -37,6 +43,9 @@ alias dreadnode='docker run -it --net=host -v/var/run/docker.sock:/var/run/docke
 ```
 
 ## Usage
+
+> [!NOTE]
+> For a full list of commands and options, see the [CLI.md](./CLI.md) file.
 
 Help menu:
 
@@ -94,11 +103,14 @@ Interact with Strike agents:
 # list all strikes
 dreadnode agent strikes
 
+# list all available templates with their descriptions
+dreadnode agent templates
+
 # initialize a new agent in the current directory
-dreadnode agent init <strike_id>
+dreadnode agent init -t <template_name> <strike_id> 
 
 # initialize a new agent in the specified directory
-dreadnode agent init <strike_id> --dir <directory>
+dreadnode agent init -t <template_name> <strike_id> --dir <directory>
 
 # push a new version of the agent
 dreadnode agent push

@@ -8,6 +8,7 @@ AGENT_CONFIG_FILENAME = ".dreadnode.yaml"
 
 
 class AgentLink(pydantic.BaseModel):
+    profile: str
     id: UUID
     runs: list[UUID] = []
 
@@ -42,11 +43,18 @@ class AgentConfig(pydantic.BaseModel):
         with (directory / AGENT_CONFIG_FILENAME).open("w") as f:
             YAML().dump(self.model_dump(mode="json"), f)
 
-    def add_link(self, key: str, id: UUID) -> "AgentConfig":
+    def add_link(self, key: str, id: UUID, profile: str) -> "AgentConfig":
         if key not in self.links:
-            self.links[key] = AgentLink(id=id)
+            self.links[key] = AgentLink(id=id, profile=profile)
         self.active = key
         return self
+
+    @property
+    def linked_profiles(self) -> list[str]:
+        return list({link.profile for link in self.links.values()})
+
+    def is_linked_to_profile(self, profile: str) -> bool:
+        return any(link.profile == profile for link in self.links.values())
 
     def add_run(self, id: UUID) -> "AgentConfig":
         self.active_link.runs.append(id)

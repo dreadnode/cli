@@ -1,0 +1,1 @@
+Nerve template with scaffolding for a basic agent.
