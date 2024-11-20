@@ -75,6 +75,17 @@ async def main() -> None:
                 "role": "user",
                 "content": f"""\
         <guidance>{GUIDANCE}<guidance>
+        {% if strike.zones is defined and strike.zones|length > 0 %}
+        You can interact with the following zones:
+        <zones>
+            {% for zone in strike.zones %}
+                <zone>
+                    <name>{{ zone.name }}</name>
+                    <guidance>{{ zone.guidance }}</guidance>
+                </zone>
+            {% endfor %}
+        </zones>
+        {% endif %}
 
         Write a bash command between the following xml tags:
         {Command.xml_example()}

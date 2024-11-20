@@ -74,7 +74,7 @@ def init(
 
     AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
 
-    install_template(template, directory, {"project_name": project_name})
+    install_template(template, directory, {"project_name": project_name, "strike": strike_response})
 
     print()
     print(f"Initialized [b]{directory}[/]")
