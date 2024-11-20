@@ -113,10 +113,10 @@ dreadnode agent init -t <template_name> <strike_id>
 dreadnode agent init -t <template_name> <strike_id> --dir <directory>
 
 # initialize a new agent using a custom template from a github repository
-dreadnode agent init -t username/repository <strike_id>
+dreadnode agent init --source username/repository <strike_id>
 
 # initialize a new agent using a custom template from a ZIP archive URL
-dreadnode agent init -t https://example.com/template-archive.zip <strike_id>
+dreadnode agent init --source https://example.com/template-archive.zip <strike_id>
 
 # push a new version of the agent
 dreadnode agent push
