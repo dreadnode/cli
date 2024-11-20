@@ -44,6 +44,9 @@ alias dreadnode='docker run -it --net=host -v/var/run/docker.sock:/var/run/docke
 
 ## Usage
 
+> [!NOTE]
+> For a full list of commands and options, see the [CLI.md](./CLI.md) file.
+
 Help menu:
 
 ```bash

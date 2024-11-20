@@ -356,6 +356,9 @@ class Client:
         start: datetime | None
         end: datetime | None
 
+        def is_running(self) -> bool:
+            return self.status not in ["completed", "failed", "timeout", "terminated"]
+
     class StrikeRunSummaryResponse(_StrikeRun):
         zones: list["Client.StrikeRunZoneSummary"]
 

@@ -203,7 +203,7 @@ def deploy(
         return
 
     with Live(formatted, refresh_per_second=2) as live:
-        while run.status not in ["completed", "failed", "timeout", "terminated"]:
+        while run.is_running():
             time.sleep(1)
             run = client.get_strike_run(run.id)
             live.update(format_run(run))

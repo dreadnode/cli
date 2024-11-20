@@ -5,11 +5,21 @@ import pytest
 
 import dreadnode_cli.agent.docker as docker
 from dreadnode_cli.config import ServerConfig
+from dreadnode_cli.defaults import DOCKER_REGISTRY_IMAGE_TAG
 
 
 class MockImage:
+    def __init__(self, tags: list[str] | None = None) -> None:
+        self.tags = tags or []
+
     def tag(self, *args: t.Any, **kwargs: t.Any) -> None:
         pass
+
+
+class MockContainer:
+    def __init__(self, image_tags: list[str], attrs: dict[str, t.Any]) -> None:
+        self.image = MockImage(image_tags)
+        self.attrs = attrs
 
 
 class MockDockerClient:
@@ -36,6 +46,13 @@ class MockDockerClient:
         @staticmethod
         def get(id: str) -> MockImage:
             return MockImage()
+
+    class containers:
+        containers: list[MockContainer] = []
+
+        @staticmethod
+        def list(*args: t.Any, **kwargs: t.Any) -> list[MockContainer]:
+            return MockDockerClient.containers.containers
 
 
 def _create_test_server_config(url: str = "https://crucible.dreadnode.io") -> ServerConfig:
@@ -114,6 +131,20 @@ def test_get_registry() -> None:
     # Test localhost registry
     config = _create_test_server_config("http://localhost:8000")
     assert docker.get_registry(config) == "localhost:5005"
+
+
+def test_get_local_registry_port_with_running_registry_container() -> None:
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            docker.client.containers,
+            "containers",
+            [
+                MockContainer(
+                    [DOCKER_REGISTRY_IMAGE_TAG], {"NetworkSettings": {"Ports": {"5000/tcp": [{"HostPort": "12345"}]}}}
+                )
+            ],
+        )
+        assert docker.get_registry(_create_test_server_config("http://localhost:8000")) == "localhost:12345"
 
 
 def test_get_registry_without_schema() -> None:
