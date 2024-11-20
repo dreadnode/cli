@@ -1,4 +1,5 @@
 import pathlib
+import shutil
 import time
 import typing as t
 
@@ -21,9 +22,9 @@ from dreadnode_cli.agent.format import (
     format_strikes,
     format_templates,
 )
-from dreadnode_cli.agent.templates import Template, install_template
+from dreadnode_cli.agent.templates import Template, install_template, install_template_from_dir
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import pretty_cli
+from dreadnode_cli.utils import download_and_unzip_archive, normalize_template_source, pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -48,7 +49,16 @@ def init(
     template: t.Annotated[
         Template, typer.Option("--template", "-t", help="The template to use for the agent")
     ] = Template.rigging_basic,
+    source: t.Annotated[
+        str | None,
+        typer.Option(
+            "--source",
+            help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
+        ),
+    ] = None,
 ) -> None:
+    print(f":coffee: Fetching strike '{strike}' ...")
+
     client = api.create_client()
 
     try:
@@ -56,12 +66,10 @@ def init(
     except Exception as e:
         raise Exception(f"Failed to find strike '{strike}': {e}") from e
 
-    print()
     print(f":crossed_swords: Linking to strike '{strike_response.name}' ({strike_response.type})")
 
     print()
     project_name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
 
     directory.mkdir(exist_ok=True)
 
@@ -74,7 +82,37 @@ def init(
 
     AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
 
-    install_template(template, directory, {"project_name": project_name, "strike": strike_response})
+    print()
+
+    context = {"project_name": project_name, "strike": strike_response}
+
+    if source is None:
+        # initialize from builtin template
+        template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
+
+        install_template(template, directory, context)
+    else:
+        source_dir = pathlib.Path(source)
+        cleanup = False
+
+        if not source_dir.exists():
+            # source is not a local folder, so it can be:
+            # - full github repository URL
+            # - full ZIP archive URL
+            # - username/repo
+            source = normalize_template_source(source)
+            # download and unzip to a temporary directory
+            source_dir = download_and_unzip_archive(source)
+            # make sure the temporary directory is cleaned up
+            cleanup = True
+
+        try:
+            # initialize from local folder, validation performed inside install_template_from_dir
+            install_template_from_dir(source_dir, directory, context)
+        except Exception:
+            if cleanup and source_dir.exists():
+                shutil.rmtree(source_dir)
+            raise
 
     print()
     print(f"Initialized [b]{directory}[/]")
