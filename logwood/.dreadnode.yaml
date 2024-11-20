@@ -1,0 +1,8 @@
+project_name: logwood
+strike: logwood
+active: bright-lyrebird
+links:
+  bright-lyrebird:
+    id: ce78543e-6141-4004-9187-f022482f9240
+    runs:
+    - 5d215ed2-bfde-4d1f-b866-5757185c0b8c

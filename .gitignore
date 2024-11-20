@@ -60,3 +60,7 @@ dmypy.json
 .pytest_cache/
 
 /mock.*.json
+
+# Test agent folders
+/logwood-test/
+/dc/

@@ -1,0 +1,10 @@
+project_name: danger
+strike: dangerous-capabilities
+active: dancing-foxhound
+links:
+  dancing-foxhound:
+    id: 31366521-d4b5-437c-b0c4-58789be6f6f4
+    runs:
+    - 8bef164a-ae9a-4173-8a96-6434b90ac2f3
+    - cd02a8a4-84bb-4089-a4d6-8bcb22a71669
+    - 3e8359f2-1ae8-478b-9189-c717bc0b1f08

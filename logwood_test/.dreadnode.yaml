@@ -1,0 +1,8 @@
+project_name: logwood_test
+strike: logwood
+active: pragmatic-lori
+links:
+  pragmatic-lori:
+    id: ccc7f240-b6cd-4740-943d-4812b5a0fa56
+    runs:
+    - 30b3fb2b-8b3f-45c6-8678-e74d84f67484

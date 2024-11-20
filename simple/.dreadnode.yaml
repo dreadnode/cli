@@ -1,0 +1,9 @@
+project_name: simple
+strike: simple
+active: purple-avocet
+links:
+  purple-avocet:
+    id: a70ca1ee-e89e-4e00-bd5f-7513d7299037
+    runs:
+    - 21b373a6-18cb-4aa4-911d-1ef82af09207
+    - e81525d2-1106-4f50-8b38-e22ed3b58da0
