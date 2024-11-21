@@ -350,6 +350,7 @@ class Client:
         model: str | None
         agent_id: UUID
         agent_key: str
+        agent_name: str | None = None
         agent_revision: int
         agent_version: "Client.StrikeAgentVersion"
         status: "Client.StrikeRunStatus"
@@ -357,7 +358,7 @@ class Client:
         end: datetime | None
 
         def is_running(self) -> bool:
-            return self.status not in ["completed", "failed", "timeout", "terminated"]
+            return self.status in ["pending", "deploying", "running"]
 
     class StrikeRunSummaryResponse(_StrikeRun):
         zones: list["Client.StrikeRunZoneSummary"]

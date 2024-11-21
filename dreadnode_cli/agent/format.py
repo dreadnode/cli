@@ -190,9 +190,11 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
         table.add_row("id", f"[dim]{zone.id}[/]")
         table.add_row("score", f"[yellow]{zone_score}[/]" if zone_score else "[dim]0[/]")
         table.add_row("outputs", f"[magenta]{len(zone.outputs)}[/]" if zone.outputs else "[dim]0[/]")
+        table.add_row("inferences", f"[blue]{len(zone.inferences)}[/]" if zone.inferences else "[dim]0[/]")
         table.add_row("start", format_time(zone.start))
         table.add_row("end", format_time(zone.end))
         table.add_row("duration", Text(format_duration(zone.start, zone.end), style="bold cyan"))
+
         table.add_row("", "")
 
         sub_components: list[RenderableType] = [table]
@@ -258,9 +260,14 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
     table.add_row("strike", f"[magenta]{run.strike_name}[/] ([dim]{run.strike_key}[/])")
     table.add_row("type", run.strike_type)
 
+    if run.agent_name:
+        agent_name = f"[bold magenta]{run.agent_name}[/] [[dim]{run.agent_key}[/]]"
+    else:
+        agent_name = f"[bold magenta]{run.agent_key}[/]"
+
     table.add_row("", "")
     table.add_row("model", run.model or "<default>")
-    table.add_row("agent", f"[bold magenta]{run.agent_key}[/] ([dim]rev[/] [yellow]{run.agent_revision}[/])")
+    table.add_row("agent", f"{agent_name} ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
     table.add_row("notes", run.agent_version.notes or "-")
 
