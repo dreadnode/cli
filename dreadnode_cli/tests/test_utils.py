@@ -10,7 +10,6 @@ import pytest
 
 from dreadnode_cli.utils import (
     download_and_unzip_archive,
-    normalize_template_source,
     parse_jwt_token_expiration,
     time_to,
 )
@@ -62,54 +61,6 @@ def test_parse_jwt_token_expiration() -> None:
     exp_date = parse_jwt_token_expiration(token)
     assert isinstance(exp_date, datetime)
     assert exp_date == datetime.fromtimestamp(1708656000)
-
-
-def test_normalize_template_source_with_zip_extension() -> None:
-    # Test full HTTPS URL with .zip extension - should remain unchanged
-    url = "https://github.com/user/repo/archive/refs/heads/main.zip"
-    assert normalize_template_source(url) == url
-
-
-def test_normalize_template_source_without_zip_extension() -> None:
-    # Test full HTTPS URL without .zip extension
-    url = "https://github.com/user/repo"
-    expected = "https://github.com/user/repo/archive/refs/heads/main.zip"
-    assert normalize_template_source(url) == expected
-
-
-def test_normalize_template_source_short_form() -> None:
-    # Test short form without protocol
-    url = "user/repo"
-    expected = "https://github.com/user/repo/archive/refs/heads/main.zip"
-    assert normalize_template_source(url) == expected
-
-
-def test_normalize_template_source_http_protocol() -> None:
-    # Test other protocol
-    url = "http://github.com/user/repo"
-    expected = "http://github.com/user/repo/archive/refs/heads/main.zip"
-    assert normalize_template_source(url) == expected
-
-
-def test_normalize_template_source_custom_domain() -> None:
-    # Test custom domain
-    url = "https://gitlab.com/user/repo"
-    expected = "https://gitlab.com/user/repo/archive/refs/heads/main.zip"
-    assert normalize_template_source(url) == expected
-
-
-def test_normalize_template_source_custom_zip_url() -> None:
-    # Test custom URL with .zip extension - should remain unchanged
-    url = "https://example.com/downloads/template.zip"
-    assert normalize_template_source(url) == url
-
-
-def test_normalize_template_source_custom_branch() -> None:
-    # Test with custom branch name
-    url = "user/repo"
-    branch = "develop"
-    expected = "https://github.com/user/repo/archive/refs/heads/develop.zip"
-    assert normalize_template_source(url, branch) == expected
 
 
 def test_download_and_unzip_archive_success(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:

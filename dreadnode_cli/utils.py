@@ -13,6 +13,7 @@ import httpx
 from rich import print
 
 from dreadnode_cli.defaults import DEBUG
+from dreadnode_cli.types import GithubRepo
 
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
@@ -67,22 +68,13 @@ def parse_jwt_token_expiration(token: str) -> datetime:
     return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
 
-def normalize_template_source(source: str, source_branch: str = "main") -> str:
-    """Normalize a template source to a ZIP archive URL."""
-
-    # github repository / ZIP archive URL
-    if "://" not in source:
-        # only username/repo specified, normalize to HTTPS URL
-        source = f"https://github.com/{source}"
-
-    if not source.lower().endswith(".zip"):
-        # normalize to ZIP archive URL
-        source = f"{source}/archive/refs/heads/{source_branch}.zip"
-
-    return source
+def repo_exists(repo: GithubRepo) -> bool:
+    """Check if a repo exists (or is private) on GitHub."""
+    response = httpx.get(f"https://github.com/repos/{repo.namespace}/{repo.repo}")
+    return response.status_code == 200
 
 
-def download_and_unzip_archive(url: str) -> pathlib.Path:
+def download_and_unzip_archive(url: str, *, headers: dict[str, str] | None = None) -> pathlib.Path:
     """
     Downloads a ZIP archive from the given URL and unzips it into a temporary directory.
     """
@@ -93,7 +85,7 @@ def download_and_unzip_archive(url: str) -> pathlib.Path:
     print(f":arrow_double_down: Downloading {url} ...")
 
     # download to temporary file
-    with httpx.stream("GET", url, follow_redirects=True, verify=True) as response:
+    with httpx.stream("GET", url, follow_redirects=True, verify=True, headers=headers) as response:
         response.raise_for_status()
         with open(local_zip_path, "wb") as zip_file:
             for chunk in response.iter_bytes(chunk_size=8192):
@@ -109,14 +101,9 @@ def download_and_unzip_archive(url: str) -> pathlib.Path:
                 else:
                     raise Exception("Attempted Path Traversal Attack Detected")
 
-    except Exception:
+    finally:
         # always remove the zip file
         if local_zip_path.exists():
             os.remove(local_zip_path)
-        raise
-
-    # always remove the zip file
-    if local_zip_path.exists():
-        os.remove(local_zip_path)
 
     return temp_dir

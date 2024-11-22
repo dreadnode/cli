@@ -24,7 +24,8 @@ from dreadnode_cli.agent.format import (
 )
 from dreadnode_cli.agent.templates import Template, install_template, install_template_from_dir
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import download_and_unzip_archive, normalize_template_source, pretty_cli
+from dreadnode_cli.types import GithubRepo
+from dreadnode_cli.utils import download_and_unzip_archive, pretty_cli, repo_exists
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -53,16 +54,10 @@ def init(
         str | None,
         typer.Option(
             "--source",
+            "-s",
             help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
         ),
     ] = None,
-    source_branch: t.Annotated[
-        str,
-        typer.Option(
-            "--source-branch",
-            help="If --source is a github repository, use this as the branch name",
-        ),
-    ] = "main",
 ) -> None:
     print(f":coffee: Fetching strike '{strike}' ...")
 
@@ -74,9 +69,10 @@ def init(
         raise Exception(f"Failed to find strike '{strike}': {e}") from e
 
     print(f":crossed_swords: Linking to strike '{strike_response.name}' ({strike_response.type})")
-
     print()
+
     project_name = Prompt.ask("Project name?", default=name or directory.name)
+    print()
 
     directory.mkdir(exist_ok=True)
 
@@ -84,12 +80,9 @@ def init(
         AgentConfig.read(directory)
         if Prompt.ask(":axe: Agent config exists, overwrite?", choices=["y", "n"], default="n") == "n":
             return
+        print()
     except Exception:
         pass
-
-    AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
-
-    print()
 
     context = {"project_name": project_name, "strike": strike_response}
 
@@ -104,12 +97,32 @@ def init(
 
         if not source_dir.exists():
             # source is not a local folder, so it can be:
-            # - full github repository URL
             # - full ZIP archive URL
-            # - username/repo
-            source = normalize_template_source(source, source_branch)
-            # download and unzip to a temporary directory
-            source_dir = download_and_unzip_archive(source)
+            # - github compatible reference
+
+            try:
+                github_repo = GithubRepo(source)
+
+                # Check if the repo is accessible
+                if repo_exists(github_repo):
+                    source_dir = download_and_unzip_archive(github_repo.zip_url)
+
+                # This could be a private repo that the user can access
+                # by getting an access token from our API
+                elif github_repo.namespace == "dreadnode" and (
+                    github_access_token := client.get_github_access_token([github_repo.repo])
+                ):
+                    print(":key: Accessed private repository")
+                    source_dir = download_and_unzip_archive(
+                        github_repo.api_zip_url, headers={"Authorization": f"Bearer {github_access_token.token}"}
+                    )
+
+                else:
+                    raise Exception(f"Repository '{github_repo}' not found or inaccessible")
+
+            except ValueError:
+                source_dir = download_and_unzip_archive(source)
+
             # make sure the temporary directory is cleaned up
             cleanup = True
 
@@ -120,6 +133,9 @@ def init(
             if cleanup and source_dir.exists():
                 shutil.rmtree(source_dir)
             raise
+
+    # Wait to write this until after the template is installed
+    AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
 
     print()
     print(f"Initialized [b]{directory}[/]")
