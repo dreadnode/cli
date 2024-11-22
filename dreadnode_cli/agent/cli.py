@@ -1,4 +1,5 @@
 import pathlib
+import shutil
 import time
 import typing as t
 
@@ -21,9 +22,10 @@ from dreadnode_cli.agent.format import (
     format_strikes,
     format_templates,
 )
-from dreadnode_cli.agent.templates import Template, install_template
+from dreadnode_cli.agent.templates import Template, install_template, install_template_from_dir
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.utils import pretty_cli
+from dreadnode_cli.types import GithubRepo
+from dreadnode_cli.utils import download_and_unzip_archive, pretty_cli, repo_exists
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -48,7 +50,17 @@ def init(
     template: t.Annotated[
         Template, typer.Option("--template", "-t", help="The template to use for the agent")
     ] = Template.rigging_basic,
+    source: t.Annotated[
+        str | None,
+        typer.Option(
+            "--source",
+            "-s",
+            help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
+        ),
+    ] = None,
 ) -> None:
+    print(f":coffee: Fetching strike '{strike}' ...")
+
     client = api.create_client()
 
     try:
@@ -56,12 +68,11 @@ def init(
     except Exception as e:
         raise Exception(f"Failed to find strike '{strike}': {e}") from e
 
-    print()
     print(f":crossed_swords: Linking to strike '{strike_response.name}' ({strike_response.type})")
-
     print()
+
     project_name = Prompt.ask("Project name?", default=name or directory.name)
-    template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
+    print()
 
     directory.mkdir(exist_ok=True)
 
@@ -69,12 +80,62 @@ def init(
         AgentConfig.read(directory)
         if Prompt.ask(":axe: Agent config exists, overwrite?", choices=["y", "n"], default="n") == "n":
             return
+        print()
     except Exception:
         pass
 
-    AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
+    context = {"project_name": project_name, "strike": strike_response}
 
-    install_template(template, directory, {"project_name": project_name, "strike": strike_response})
+    if source is None:
+        # initialize from builtin template
+        template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
+
+        install_template(template, directory, context)
+    else:
+        source_dir = pathlib.Path(source)
+        cleanup = False
+
+        if not source_dir.exists():
+            # source is not a local folder, so it can be:
+            # - full ZIP archive URL
+            # - github compatible reference
+
+            try:
+                github_repo = GithubRepo(source)
+
+                # Check if the repo is accessible
+                if repo_exists(github_repo):
+                    source_dir = download_and_unzip_archive(github_repo.zip_url)
+
+                # This could be a private repo that the user can access
+                # by getting an access token from our API
+                elif github_repo.namespace == "dreadnode" and (
+                    github_access_token := client.get_github_access_token([github_repo.repo])
+                ):
+                    print(":key: Accessed private repository")
+                    source_dir = download_and_unzip_archive(
+                        github_repo.api_zip_url, headers={"Authorization": f"Bearer {github_access_token.token}"}
+                    )
+
+                else:
+                    raise Exception(f"Repository '{github_repo}' not found or inaccessible")
+
+            except ValueError:
+                source_dir = download_and_unzip_archive(source)
+
+            # make sure the temporary directory is cleaned up
+            cleanup = True
+
+        try:
+            # initialize from local folder, validation performed inside install_template_from_dir
+            install_template_from_dir(source_dir, directory, context)
+        except Exception:
+            if cleanup and source_dir.exists():
+                shutil.rmtree(source_dir)
+            raise
+
+    # Wait to write this until after the template is installed
+    AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
 
     print()
     print(f"Initialized [b]{directory}[/]")

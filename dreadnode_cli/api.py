@@ -229,6 +229,19 @@ class Client:
         response = self.request("POST", f"/api/challenges/{challenge}/submit-flag", json_data={"flag": flag})
         return bool(response.json().get("correct", False))
 
+    # Github
+
+    class GithubTokenResponse(BaseModel):
+        token: str
+        expires_at: datetime
+        repos: list[str]
+
+    def get_github_access_token(self, repos: list[str]) -> GithubTokenResponse | None:
+        """Try to get a GitHub access token for the given repositories."""
+
+        response = self.request("POST", "/api/github/token", json_data={"repos": repos})
+        return self.GithubTokenResponse(**response.json()) if response.status_code == 200 else None
+
     # Strikes
 
     StrikeRunStatus = t.Literal[
