@@ -23,7 +23,7 @@ Dreadnode command line interface
 
 ## Installation
 
-### From PyPi
+### From PyPi:
 
 ```bash
 pip install dreadnode-cli
