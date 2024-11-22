@@ -1,6 +1,33 @@
-Dreadnode command line interface.
+<p align="center">
+    <img
+    src="https://d1lppblt9t2x15.cloudfront.net/logos/5714928f3cdc09503751580cffbe8d02.png"
+    alt="Logo"
+    align="center"
+    width="144px"
+    height="144px"
+    />
+</p>
+
+<h3 align="center">
+Dreadnode command line interface
+</h3>
+
+<h4 align="center">
+    <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/dreadnode-cli">
+    <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/dreadnode-cli">
+    <img alt="GitHub License" src="https://img.shields.io/github/license/dreadnode/cli">
+    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/dreadnode/cli/ci.yml">
+</h4>
+
+</br>
 
 ## Installation
+
+### From PyPi
+
+```bash
+pip install dreadnode-cli
+```
 
 ### With Poetry:
 
