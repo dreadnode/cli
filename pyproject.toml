@@ -27,12 +27,14 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.8.0"
 ruff = "^0.1.14"
+pre-commit = "^3.8.0"
 pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
 
 [tool.poetry.scripts]
 dreadnode = 'dreadnode_cli.__main__:run'
