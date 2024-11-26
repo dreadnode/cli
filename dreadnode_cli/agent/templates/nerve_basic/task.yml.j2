@@ -14,6 +14,7 @@ guidance:
   - After each command, review the results and understand how it should affect your approach.
   - Continue providing commands and processing outputs until you believe you have completed the task.
   - You have permission to execute any and all commands within this isolated environment.
+  - ALWAYS use the report_findings tool to report EACH of your finding before setting your task as complete.
 
 prompt: |
   {{ strike.guidance }}
@@ -41,4 +42,4 @@ functions:
             "description": "This is an example finding",
             "evidence": "This is the evidence for the finding"
           }
-        tool: 'curl -s -XPOST -H"Content-Type:application/json" http://dropship/output -d'
+        tool: curl -s -XPOST -H Content-Type:application/json http://dropship/output -d
