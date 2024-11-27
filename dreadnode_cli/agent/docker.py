@@ -125,7 +125,8 @@ class DockerPushDisplay:
                 current = line["progressDetail"].get("current", 0)
                 total = line["progressDetail"].get("total", 0)
                 if total > 0:
-                    percentage = (current / total) * 100
+                    # (ENG-280) sometimes docker returns not entirely synced current vs totals
+                    percentage = min((current / total) * 100, 100.0)
                     output.append(f" {percentage:.1f}%", style="cyan")
 
             output.append("\n")
