@@ -40,8 +40,7 @@ jobs:
             venv-${{ runner.os }}-py${{ matrix.python-version }}-
 
       - name: Install package
-        run: |
-          poetry install --all-extras
+        run: poetry install --all-extras
 
       - name: Validate version
         run: |
@@ -59,11 +58,5 @@ jobs:
         run: poetry run mypy --no-error-summary dreadnode_cli
 
       - name: Test
-        run: poetry run pytest --junitxml=pytest.xml dreadnode_cli
+        run: poetry run pytest dreadnode_cli
 
-      - name: Upload test results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
-        if: always()
-        with:
-          name: test-results-${{ matrix.python-version }}
-          path: pytest.xml
