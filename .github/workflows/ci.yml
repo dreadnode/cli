@@ -1,15 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [ main, dev, feature/eng-186-cli-make-available-to-beta-users ]
-    tags: [ 'v*' ]
   pull_request:
     branches: [ main, dev ]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  push:
+    tags: [ 'v*' ]
 
 jobs:
   validate:
