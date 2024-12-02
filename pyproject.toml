@@ -2,7 +2,10 @@
 name = "dreadnode-cli"
 version = "0.0.1"
 description = "Dreadnode CLI"
-authors = ["Nick Landers <monoxgas@gmail.com>"]
+authors = [
+    "Nick Landers <monoxgas@gmail.com>",
+    "Simone Margaritelli <evilsocket@gmail.com>"
+]
 license = "MIT"
 repository = "https://github.com/dreadnode/cli"
 readme = "README.md"
@@ -24,12 +27,14 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.8.0"
 ruff = "^0.1.14"
+pre-commit = "^3.8.0"
 pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
 
 [tool.poetry.scripts]
 dreadnode = 'dreadnode_cli.__main__:run'
@@ -54,7 +59,6 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
     "NPY", # numpydoc
-    "TCH", # typecheck
     "A",   # flake8-annotations
 ]
 ignore = [
