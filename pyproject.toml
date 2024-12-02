@@ -59,7 +59,6 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
     "NPY", # numpydoc
-    "TCH", # typecheck
     "A",   # flake8-annotations
 ]
 ignore = [
