@@ -24,10 +24,46 @@ from dreadnode_cli.agent.format import (
 )
 from dreadnode_cli.agent.templates import Template, install_template, install_template_from_dir
 from dreadnode_cli.config import UserConfig
+from dreadnode_cli.profile.cli import switch as switch_profile
 from dreadnode_cli.types import GithubRepo
 from dreadnode_cli.utils import download_and_unzip_archive, pretty_cli, repo_exists
 
 cli = typer.Typer(no_args_is_help=True)
+
+
+def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None = None) -> None:
+    """Ensure the active agent link matches the current server profile."""
+
+    user_config = user_config or UserConfig.read()
+
+    if not user_config.active_profile_name:
+        raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
+
+    if agent_config.links and not agent_config.has_link_to_profile(user_config.active_profile_name):
+        linked_profiles = ", ".join(agent_config.linked_profiles)
+        plural = "s" if len(agent_config.linked_profiles) > 1 else ""
+        raise Exception(
+            f"This agent is linked to the [magenta]{linked_profiles}[/] server profile{plural}, "
+            f"but the current server profile is [yellow]{user_config.active_profile_name}[/], ",
+            "use [bold]dreadnode agent push[/] to create a new link with this profile.",
+        )
+
+    if agent_config.active_link.profile != user_config.active_profile_name:
+        if (
+            Prompt.ask(
+                f"Current agent link points to the [yellow]{agent_config.active_link.profile}[/] server profile, "
+                f"would you like to switch to it?",
+                choices=["y", "n"],
+                default="y",
+            )
+            == "n"
+        ):
+            print()
+            raise Exception(
+                "Agent link does not match the current server profile. Use [bold]dreadnode agent switch[/] or [bold]dreadnode profile switch[/]."
+            )
+
+        switch_profile(agent_config.active_link.profile)
 
 
 @cli.command(help="List all available templates with their descriptions")
@@ -164,12 +200,9 @@ def push(
     if not user_config.active_profile_name:
         raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
 
-    if agent_config.links and not agent_config.is_linked_to_profile(user_config.active_profile_name):
-        linked_profiles = ", ".join(agent_config.linked_profiles)
-        plural = "s" if len(agent_config.linked_profiles) > 1 else ""
-        raise Exception(
-            f"This agent is linked to the [magenta]{linked_profiles}[/] server profile{plural}, but the current server profile is [yellow]{user_config.active_profile_name}[/], create the agent again."
-        )
+    if agent_config.links and not agent_config.has_link_to_profile(user_config.active_profile_name):
+        print(f":link: Linking as a fresh agent to the current profile [magenta]{user_config.active_profile_name}[/]")
+        new = True
 
     server_config = user_config.get_server_config()
 
@@ -239,6 +272,8 @@ def deploy(
     watch: t.Annotated[bool, typer.Option("--watch", "-w", help="Watch the run status")] = True,
 ) -> None:
     agent_config = AgentConfig.read(directory)
+    ensure_profile(agent_config)
+
     active_link = agent_config.active_link
 
     client = api.create_client()
@@ -280,6 +315,7 @@ def models(
 ) -> None:
     if strike is None:
         agent_config = AgentConfig.read(directory)
+        ensure_profile(agent_config)
 
     strike = strike or agent_config.strike
     if strike is None:
@@ -310,7 +346,10 @@ def latest(
     ] = False,
     raw: t.Annotated[bool, typer.Option("--raw", help="Show raw JSON output")] = False,
 ) -> None:
-    active_link = AgentConfig.read(directory).active_link
+    agent_config = AgentConfig.read(directory)
+    ensure_profile(agent_config)
+
+    active_link = agent_config.active_link
     if not active_link.runs:
         print(":exclamation: No runs yet, use [bold]dreadnode agent deploy[/]")
         return
@@ -332,9 +371,11 @@ def show(
         typer.Option("--dir", "-d", help="The agent directory", file_okay=False, resolve_path=True),
     ] = pathlib.Path("."),
 ) -> None:
-    active_link = AgentConfig.read(directory).active_link
+    agent_config = AgentConfig.read(directory)
+    ensure_profile(agent_config)
+
     client = api.create_client()
-    agent = client.get_strike_agent(active_link.id)
+    agent = client.get_strike_agent(agent_config.active_link.id)
     print(format_agent(agent))
 
 
@@ -345,9 +386,11 @@ def versions(
         pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
     ] = pathlib.Path("."),
 ) -> None:
-    active_link = AgentConfig.read(directory).active_link
+    agent_config = AgentConfig.read(directory)
+    ensure_profile(agent_config)
+
     client = api.create_client()
-    agent = client.get_strike_agent(active_link.id)
+    agent = client.get_strike_agent(agent_config.active_link.id)
     print(format_agent_versions(agent))
 
 
@@ -358,10 +401,13 @@ def runs(
         pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
     ] = pathlib.Path("."),
 ) -> None:
-    active_link = AgentConfig.read(directory).active_link
+    agent_config = AgentConfig.read(directory)
+    ensure_profile(agent_config)
 
     client = api.create_client()
-    runs = [run for run in client.list_strike_runs() if run.id in active_link.runs and run.start is not None]
+    runs = [
+        run for run in client.list_strike_runs() if run.id in agent_config.active_link.runs and run.start is not None
+    ]
     runs = sorted(runs, key=lambda r: r.start or 0, reverse=True)
 
     if not runs:
@@ -379,23 +425,26 @@ def links(
     ] = pathlib.Path("."),
 ) -> None:
     agent_config = AgentConfig.read(directory)
-    client = api.create_client()
-
+    user_config = UserConfig.read()
     _ = agent_config.active_link
 
     table = Table(box=box.ROUNDED)
     table.add_column("Key", style="magenta")
     table.add_column("Name", style="cyan")
+    table.add_column("Profile")
     table.add_column("ID")
 
     for key, link in agent_config.links.items():
-        active = key == agent_config.active
+        active_link = key == agent_config.active
+        mismatched_profile = active_link and user_config.active_profile_name != link.profile
+        client = api.create_client(profile=agent_config.links[key].profile)
         agent = client.get_strike_agent(link.id)
         table.add_row(
-            agent.key + ("*" if active else ""),
+            agent.key + ("*" if active_link else ""),
             agent.name or "N/A",
+            link.profile + ("[bold red]* (not-active)[/]" if mismatched_profile else ""),
             f"[dim]{agent.id}[/]",
-            style="bold" if active else None,
+            style="bold" if active_link else None,
         )
 
     print(table)
@@ -404,7 +453,7 @@ def links(
 @cli.command(help="Switch/link to a different agent")
 @pretty_cli
 def switch(
-    agent: t.Annotated[str, typer.Argument(help="Agent key or id")],
+    agent_or_profile: t.Annotated[str, typer.Argument(help="Agent key/id or profile name")],
     directory: t.Annotated[
         pathlib.Path, typer.Argument(help="The agent directory", file_okay=False, resolve_path=True)
     ] = pathlib.Path("."),
@@ -412,10 +461,12 @@ def switch(
     agent_config = AgentConfig.read(directory)
 
     for key, link in agent_config.links.items():
-        if agent in (key, link.id):
-            print(f":robot: Switched to link [bold magenta]{key}[/] ([dim]{link.id}[/])")
+        if agent_or_profile in (key, link.id) or agent_or_profile == link.profile:
+            print(
+                f":robot: Switched to link [bold magenta]{key}[/] for profile [cyan]{link.profile}[/] ([dim]{link.id}[/])"
+            )
             agent_config.active = key
             agent_config.write(directory)
             return
 
-    print(f":exclamation: Agent '{agent}' not found, use [bold]dreadnode agent links[/]")
+    print(f":exclamation: '{agent_or_profile}' not found, use [bold]dreadnode agent links[/]")

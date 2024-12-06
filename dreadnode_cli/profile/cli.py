@@ -60,6 +60,7 @@ def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")
     print(f"|- email:    [bold]{config.servers[profile].email}[/]")
     print(f"|- username: {config.servers[profile].username}")
     print(f"|- url:      {config.servers[profile].url}")
+    print()
 
 
 @cli.command(help="Remove a server profile")
