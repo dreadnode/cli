@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from dreadnode_cli.agent.cli import ensure_active_profile
+from dreadnode_cli.agent.cli import ensure_profile
 from dreadnode_cli.agent.config import AgentConfig
 from dreadnode_cli.config import ServerConfig, UserConfig
 
@@ -93,7 +93,7 @@ def test_ensure_profile() -> None:
 
     # We don't have any profiles
     with pytest.raises(Exception, match="No server profile is set"):
-        ensure_active_profile(agent_config, user_config=user_config)
+        ensure_profile(agent_config, user_config=user_config)
 
     server_config = ServerConfig(
         url="http://test",
@@ -110,24 +110,24 @@ def test_ensure_profile() -> None:
 
     # We have no links
     with pytest.raises(Exception, match="No agent is currently linked"):
-        ensure_active_profile(agent_config, user_config=user_config)
+        ensure_profile(agent_config, user_config=user_config)
 
     # We have a link, but none are available for the current profile
     agent_config.add_link("test-other", UUID("00000000-0000-0000-0000-000000000000"), "other")
     with pytest.raises(Exception, match="This agent is linked to the"):
-        ensure_active_profile(agent_config, user_config=user_config)
+        ensure_profile(agent_config, user_config=user_config)
 
     # We have another link, but the profiles don't match
     agent_config.add_link("test-main", UUID("00000000-0000-0000-0000-000000000000"), "main")
     agent_config.active = "test-other"
     with patch("rich.prompt.Prompt.ask", return_value="n"):
         with pytest.raises(Exception, match="Agent link does not match the current server profile"):
-            ensure_active_profile(agent_config, user_config=user_config)
+            ensure_profile(agent_config, user_config=user_config)
 
     # We should switch if the user agrees
     assert user_config.active == "main"
     with patch("rich.prompt.Prompt.ask", return_value="y"), patch("dreadnode_cli.config.UserConfig.write"), patch(
         "dreadnode_cli.config.UserConfig.read", return_value=user_config
     ):
-        ensure_active_profile(agent_config, user_config=user_config)
+        ensure_profile(agent_config, user_config=user_config)
     assert user_config.active == "other"
