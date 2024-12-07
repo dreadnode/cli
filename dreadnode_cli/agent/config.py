@@ -53,7 +53,7 @@ class AgentConfig(pydantic.BaseModel):
     def linked_profiles(self) -> list[str]:
         return list({link.profile for link in self.links.values()})
 
-    def is_linked_to_profile(self, profile: str) -> bool:
+    def has_link_to_profile(self, profile: str) -> bool:
         return any(link.profile == profile for link in self.links.values())
 
     def add_run(self, id: UUID) -> "AgentConfig":
