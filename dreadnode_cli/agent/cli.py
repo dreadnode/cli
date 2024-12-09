@@ -94,6 +94,14 @@ def init(
             help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
         ),
     ] = None,
+    path: t.Annotated[
+        str | None,
+        typer.Option(
+            "--path",
+            "-p",
+            help="If --source has been provided, use --path to specify a subfolder to initialize from",
+        ),
+    ] = None,
 ) -> None:
     print(f":coffee: Fetching strike '{strike}' ...")
 
@@ -164,7 +172,12 @@ def init(
 
         try:
             # initialize from local folder, validation performed inside install_template_from_dir
-            install_template_from_dir(source_dir, directory, context)
+            #
+            # NOTE: source_dir and path are passed separately because github repos zip archives
+            # usually contain a single branch folder, the real source dir, and the path is not known
+            # beforehand. install_template_from_dir handles this case and combines the fixed
+            # source_dir with path accordingly.
+            install_template_from_dir(source_dir, path, directory, context)
         except Exception:
             if cleanup and source_dir.exists():
                 shutil.rmtree(source_dir)

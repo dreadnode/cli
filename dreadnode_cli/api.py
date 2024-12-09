@@ -236,11 +236,10 @@ class Client:
         expires_at: datetime
         repos: list[str]
 
-    def get_github_access_token(self, repos: list[str]) -> GithubTokenResponse | None:
+    def get_github_access_token(self, repos: list[str]) -> GithubTokenResponse:
         """Try to get a GitHub access token for the given repositories."""
-
         response = self.request("POST", "/api/github/token", json_data={"repos": repos})
-        return self.GithubTokenResponse(**response.json()) if response.status_code == 200 else None
+        return self.GithubTokenResponse(**response.json())
 
     # Strikes
 
