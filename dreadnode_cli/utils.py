@@ -70,7 +70,7 @@ def parse_jwt_token_expiration(token: str) -> datetime:
 
 def repo_exists(repo: GithubRepo) -> bool:
     """Check if a repo exists (or is private) on GitHub."""
-    response = httpx.get(f"https://github.com/repos/{repo.namespace}/{repo.repo}")
+    response = httpx.get(f"https://github.com/{repo.namespace}/{repo.repo}")
     return response.status_code == 200
 
 

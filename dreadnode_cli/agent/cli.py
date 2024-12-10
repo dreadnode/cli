@@ -66,6 +66,20 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         switch_profile(agent_config.active_link.profile)
 
 
+def get_repo_archive_source_path(source_dir: pathlib.Path) -> pathlib.Path:
+    """Return the actual source directory from a git repositoryZIP archive."""
+
+    if not (source_dir / "Dockerfile").exists() and not (source_dir / "Dockerfile.j2").exists():
+        # if src has been downloaded from a ZIP archive, it may contain a single
+        # '<user>-<repo>-<commit hash>' folder, that is the actual source we want to use.
+        # Check if source_dir contains only one folder and update it if so.
+        children = list(source_dir.iterdir())
+        if len(children) == 1 and children[0].is_dir():
+            source_dir = children[0]
+
+    return source_dir
+
+
 @cli.command(help="List all available templates with their descriptions")
 @pretty_cli
 def templates() -> None:
@@ -92,6 +106,14 @@ def init(
             "--source",
             "-s",
             help="Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder",
+        ),
+    ] = None,
+    path: t.Annotated[
+        str | None,
+        typer.Option(
+            "--path",
+            "-p",
+            help="If --source has been provided, use --path to specify a subfolder to initialize from",
         ),
     ] = None,
 ) -> None:
@@ -156,14 +178,22 @@ def init(
                 else:
                     raise Exception(f"Repository '{github_repo}' not found or inaccessible")
 
+                # github repos zip archives usually contain a single branch folder, the real source dir,
+                # and the path is not known beforehand
+                source_dir = get_repo_archive_source_path(source_dir)
+
             except ValueError:
+                # not a repo, download and unzip as a ZIP archive URL
                 source_dir = download_and_unzip_archive(source)
 
             # make sure the temporary directory is cleaned up
             cleanup = True
 
         try:
-            # initialize from local folder, validation performed inside install_template_from_dir
+            # add subpath if specified
+            if path is not None:
+                source_dir = source_dir / path
+
             install_template_from_dir(source_dir, directory, context)
         except Exception:
             if cleanup and source_dir.exists():
