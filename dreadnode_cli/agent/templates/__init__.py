@@ -26,12 +26,10 @@ def template_description(template: Template) -> str:
 
 def install_template(template: Template, dest: pathlib.Path, context: dict[str, t.Any]) -> None:
     """Install a template into a directory."""
-    install_template_from_dir(TEMPLATES_DIR, template.value, dest, context)
+    install_template_from_dir(TEMPLATES_DIR / template.value, dest, context)
 
 
-def install_template_from_dir(
-    src: pathlib.Path, sub_path: str | None, dest: pathlib.Path, context: dict[str, t.Any]
-) -> None:
+def install_template_from_dir(src: pathlib.Path, dest: pathlib.Path, context: dict[str, t.Any]) -> None:
     """Install a template from a source directory into a destination directory."""
 
     if not src.exists():
@@ -40,21 +38,8 @@ def install_template_from_dir(
     elif not src.is_dir():
         raise Exception(f"Source '{src}' is not a directory")
 
+    # check for Dockerfile in the directory
     elif not (src / "Dockerfile").exists() and not (src / "Dockerfile.j2").exists():
-        # if src has been downloaded from a ZIP archive, it may contain a single
-        # 'project-main' folder, that is the actual source we want to use.
-        # Check if src contains only one folder and update it if so.
-        subdirs = [d for d in src.iterdir() if d.is_dir()]
-        if len(subdirs) == 1:
-            src = subdirs[0]
-
-    if sub_path is not None:
-        src = src / sub_path
-        if not src.exists():
-            raise Exception(f"Source path '{src}' does not exist.")
-
-    # check again for Dockerfile in the subdirectory
-    if not (src / "Dockerfile").exists() and not (src / "Dockerfile.j2").exists():
         raise Exception(f"Source directory {src} does not contain a Dockerfile")
 
     env = Environment(loader=FileSystemLoader(src))

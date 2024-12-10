@@ -66,6 +66,20 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         switch_profile(agent_config.active_link.profile)
 
 
+def get_repo_archive_source_path(source_dir: pathlib.Path) -> pathlib.Path:
+    """Return the actual source directory from a git repositoryZIP archive."""
+
+    if not (source_dir / "Dockerfile").exists() and not (source_dir / "Dockerfile.j2").exists():
+        # if src has been downloaded from a ZIP archive, it may contain a single
+        # '<user>-<repo>-<commit hash>' folder, that is the actual source we want to use.
+        # Check if source_dir contains only one folder and update it if so.
+        subdirs = [d for d in source_dir.iterdir() if d.is_dir()]
+        if len(subdirs) == 1:
+            source_dir = subdirs[0]
+
+    return source_dir
+
+
 @cli.command(help="List all available templates with their descriptions")
 @pretty_cli
 def templates() -> None:
@@ -164,20 +178,23 @@ def init(
                 else:
                     raise Exception(f"Repository '{github_repo}' not found or inaccessible")
 
+                # github repos zip archives usually contain a single branch folder, the real source dir,
+                # and the path is not known beforehand
+                source_dir = get_repo_archive_source_path(source_dir)
+
             except ValueError:
+                # not a repo, download and unzip as a ZIP archive URL
                 source_dir = download_and_unzip_archive(source)
 
             # make sure the temporary directory is cleaned up
             cleanup = True
 
         try:
-            # initialize from local folder, validation performed inside install_template_from_dir
-            #
-            # NOTE: source_dir and path are passed separately because github repos zip archives
-            # usually contain a single branch folder, the real source dir, and the path is not known
-            # beforehand. install_template_from_dir handles this case and combines the fixed
-            # source_dir with path accordingly.
-            install_template_from_dir(source_dir, path, directory, context)
+            # add subpath if specified
+            if path is not None:
+                source_dir = source_dir / path
+
+            install_template_from_dir(source_dir, directory, context)
         except Exception:
             if cleanup and source_dir.exists():
                 shutil.rmtree(source_dir)

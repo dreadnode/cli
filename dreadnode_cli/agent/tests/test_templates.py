@@ -16,7 +16,7 @@ def test_templates_install(tmp_path: pathlib.Path) -> None:
 
 
 def test_templates_install_from_dir(tmp_path: pathlib.Path) -> None:
-    templates.install_template_from_dir(templates.TEMPLATES_DIR / "rigging_basic", None, tmp_path, {"name": "World"})
+    templates.install_template_from_dir(templates.TEMPLATES_DIR / "rigging_basic", tmp_path, {"name": "World"})
 
     assert (tmp_path / "requirements.txt").exists()
     assert (tmp_path / "Dockerfile").exists()
@@ -43,7 +43,7 @@ CMD ["python", "app.py"]
     dest_dir.mkdir()
 
     # install template
-    templates.install_template_from_dir(source_dir, None, dest_dir, {"name": "TestContainer"})
+    templates.install_template_from_dir(source_dir, dest_dir, {"name": "TestContainer"})
 
     # verify Dockerfile was rendered correctly
     expected_dockerfile = """
@@ -90,7 +90,7 @@ def test_templates_install_from_dir_nested_structure(tmp_path: pathlib.Path) -> 
     dest_dir.mkdir()
 
     # install template
-    templates.install_template_from_dir(source_dir, None, dest_dir, {"name": "TestApp"})
+    templates.install_template_from_dir(source_dir, dest_dir, {"name": "TestApp"})
 
     # verify regular files were copied
     assert (dest_dir / "Dockerfile").exists()
@@ -109,7 +109,7 @@ def test_templates_install_from_dir_nested_structure(tmp_path: pathlib.Path) -> 
 def test_templates_install_from_dir_missing_source(tmp_path: pathlib.Path) -> None:
     source_dir = tmp_path / "nonexistent"
     with pytest.raises(Exception, match="Source directory '.*' does not exist"):
-        templates.install_template_from_dir(source_dir, None, tmp_path, {"name": "World"})
+        templates.install_template_from_dir(source_dir, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_source_is_file(tmp_path: pathlib.Path) -> None:
@@ -117,7 +117,7 @@ def test_templates_install_from_dir_source_is_file(tmp_path: pathlib.Path) -> No
     source_file.touch()
 
     with pytest.raises(Exception, match="Source '.*' is not a directory"):
-        templates.install_template_from_dir(source_file, None, tmp_path, {"name": "World"})
+        templates.install_template_from_dir(source_file, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_missing_dockerfile(tmp_path: pathlib.Path) -> None:
@@ -126,7 +126,7 @@ def test_templates_install_from_dir_missing_dockerfile(tmp_path: pathlib.Path) -
     (source_dir / "agent.py").touch()
 
     with pytest.raises(Exception, match="Source directory .+ does not contain a Dockerfile"):
-        templates.install_template_from_dir(source_dir, None, tmp_path, {"name": "World"})
+        templates.install_template_from_dir(source_dir, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_single_inner_folder(tmp_path: pathlib.Path) -> None:
@@ -144,7 +144,7 @@ def test_templates_install_from_dir_single_inner_folder(tmp_path: pathlib.Path) 
     dest_dir.mkdir()
 
     # install from the outer directory - should detect and use inner directory
-    templates.install_template_from_dir(source_dir, None, dest_dir, {"name": "World"})
+    templates.install_template_from_dir(inner_dir, dest_dir, {"name": "World"})
 
     # assert files were copied from inner directory
     assert (dest_dir / "Dockerfile").exists()
@@ -164,7 +164,7 @@ def test_templates_install_from_dir_with_path(tmp_path: pathlib.Path) -> None:
     dest_dir.mkdir()
 
     # install from subdirectory path
-    templates.install_template_from_dir(tmp_path, "source", dest_dir, {"name": "World"})
+    templates.install_template_from_dir(tmp_path / "source", dest_dir, {"name": "World"})
 
     # assert files were copied from subdirectory
     assert (dest_dir / "Dockerfile").exists()
@@ -176,5 +176,5 @@ def test_templates_install_from_dir_invalid_path(tmp_path: pathlib.Path) -> None
     source_dir.mkdir()
     (source_dir / "Dockerfile").touch()
 
-    with pytest.raises(Exception, match="Source path '.*' does not exist."):
-        templates.install_template_from_dir(source_dir, "nonexistent", tmp_path, {"name": "World"})
+    with pytest.raises(Exception, match="Source directory '.*' does not exist"):
+        templates.install_template_from_dir(source_dir / "nonexistent", tmp_path, {"name": "World"})
