@@ -73,9 +73,9 @@ def get_repo_archive_source_path(source_dir: pathlib.Path) -> pathlib.Path:
         # if src has been downloaded from a ZIP archive, it may contain a single
         # '<user>-<repo>-<commit hash>' folder, that is the actual source we want to use.
         # Check if source_dir contains only one folder and update it if so.
-        subdirs = [d for d in source_dir.iterdir() if d.is_dir()]
-        if len(subdirs) == 1:
-            source_dir = subdirs[0]
+        children = list(source_dir.iterdir())
+        if len(children) == 1 and children[0].is_dir():
+            source_dir = children[0]
 
     return source_dir
 
