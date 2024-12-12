@@ -63,12 +63,14 @@ def login(registry: str, username: str, password: str) -> None:
     client.api.login(username=username, password=password, registry=registry)
 
 
-def build(directory: str | pathlib.Path) -> Image:
+def build(directory: str | pathlib.Path, *, force_rebuild: bool = False) -> Image:
     if client is None:
         raise Exception("Docker not available")
 
     id: str | None = None
-    for item in client.api.build(path=str(directory), platform="linux/amd64", decode=True):
+    for item in client.api.build(
+        path=str(directory), platform="linux/amd64", decode=True, nocache=force_rebuild, pull=force_rebuild
+    ):
         if "error" in item:
             print()
             raise Exception(item["error"])

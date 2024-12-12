@@ -32,13 +32,12 @@ def get_status_style(status: api.Client.StrikeRunStatus | api.Client.StrikeRunZo
 
 def get_model_provider_style(provider: str) -> str:
     return {
-        "OpenAI": "spring_green4",
-        "Hugging Face": "blue",
-        "Dreadnode (private)": "magenta",
-        "Anthropic": "tan",
+        "OpenAI": "turquoise4",
+        "Hugging Face": "dark_cyan",
+        "Anthropic": "cornflower_blue",
         "Google": "cyan",
-        "MistralAI": "orange_red1",
-        "Groq": "red",
+        "MistralAI": "light_salmon3",
+        "Groq": "grey63",
     }.get(provider, "")
 
 
@@ -165,6 +164,9 @@ def format_zones_summary(zones: list[api.Client.StrikeRunZone]) -> RenderableTyp
             output.score.value if hasattr(output, "score") and output.score else 0 for output in zone.outputs
         )
 
+        if isinstance(zone_score, float):
+            zone_score = round(zone_score, 2)
+
         table.add_row(
             zone.key,
             Text(zone.status, style=get_status_style(zone.status)),
@@ -187,6 +189,9 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
 
         zone_score = sum(output.score.value if output.score else 0 for output in zone.outputs)
 
+        if isinstance(zone_score, float):
+            zone_score = round(zone_score, 2)
+
         table.add_row("id", f"[dim]{zone.id}[/]")
         table.add_row("score", f"[yellow]{zone_score}[/]" if zone_score else "[dim]0[/]")
         table.add_row("outputs", f"[magenta]{len(zone.outputs)}[/]" if zone.outputs else "[dim]0[/]")
@@ -206,6 +211,9 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
             outputs_table.add_column("explanation")
 
             for output in zone.outputs:
+                if output.score and isinstance(output.score.value, float):
+                    output.score.value = round(output.score.value, 3)
+
                 outputs_table.add_row(
                     str(output.score.value) if output.score else "-",
                     Pretty(output.data),
