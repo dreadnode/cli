@@ -193,7 +193,7 @@ You can then enter the project's virtual environment:
 poetry shell
 ```
 
-## Building the Docker Image
+### Building the Docker Image
 
 Alternatively, you can build a docker image and run the CLI from a container:
 
