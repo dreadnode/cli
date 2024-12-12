@@ -21,36 +21,35 @@ Dreadnode command line interface
 
 </br>
 
-## Installation
+## Installing
 
-### From PyPi:
+### From PyPi
 
 ```bash
 pip install dreadnode-cli
 ```
 
-### With Poetry:
-
-This project is packaged for and meant to be used with the [Poetry package management tool](https://python-poetry.org/).
-
-To install the project dependencies:
+To upgrade the CLI to the latest version, run:
 
 ```bash
-poetry install
+pip install --upgrade dreadnode-cli
 ```
 
-And then enter its shell:
+To uninstall the CLI, run:
 
 ```bash
-poetry shell
+pip uninstall dreadnode-cli
 ```
 
-### With Docker:
+> [!IMPORTANT]  
+> The data folder with authentication credentials is located at `~/.dreadnode` and will not be automatically removed when uninstalling the CLI. 
 
-Alternatively, you can build a docker image and run the CLI from a container:
+### From Docker Hub
+
+To pull the latest CLI image from Docker Hub, run:
 
 ```bash
-docker build -t dreadnode .
+docker pull dreadnode/dreadnode-cli
 ```
 
 Whenever using the CLI from a docker container, remember to share your user configuration, the network from the host and mount the docker socket:
@@ -174,4 +173,32 @@ dreadnode agent versions
 
 # switch/link to a different agent
 dreadnode agent switch <agent_id>
+```
+
+## Development
+
+### Poetry Shell
+
+This project uses the [Poetry package management tool](https://python-poetry.org/), to install from source run the following commands:
+
+```bash
+git clone https://github.com/dreadnode/cli.git
+cd cli
+poetry install
+```
+
+You can then enter the project's virtual environment:
+
+```bash
+poetry shell
+```
+
+## Building the Docker Image
+
+Alternatively, you can build a docker image and run the CLI from a container:
+
+```bash
+git clone https://github.com/dreadnode/cli.git
+cd cli
+docker build -t dreadnode .
 ```
