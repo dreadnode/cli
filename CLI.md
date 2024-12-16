@@ -39,22 +39,42 @@ $ dreadnode agent [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-* `deploy`: Start a new run using the latest agent...
+* `clone`: Clone a github repository
+* `deploy`: Start a new run using the latest active...
 * `init`: Initialize a new agent project
-* `latest`: Show the latest run of the currently...
-* `links`: List all available links
+* `latest`: Show the latest run of the active agent
+* `links`: List available agent links
 * `models`: List available models for the current (or...
-* `push`: Push a new version of the agent.
-* `runs`: List all runs for the currently active agent
-* `show`: Show the status of the currently active agent
-* `strikes`: List all strikes
-* `switch`: Switch/link to a different agent
-* `templates`: List all available templates with their...
-* `versions`: List historical versions of this agent
+* `push`: Push a new version of the active agent
+* `runs`: List runs for the active agent
+* `show`: Show the status of the active agent
+* `strikes`: List available strikes
+* `switch`: Switch to a different agent link
+* `templates`: List available agent templates with their...
+* `versions`: List historical versions of the active agent
+
+### `dreadnode agent clone`
+
+Clone a github repository
+
+**Usage**:
+
+```console
+$ dreadnode agent clone [OPTIONS] REPO [TARGET]
+```
+
+**Arguments**:
+
+* `REPO`: Repository name or URL  [required]
+* `[TARGET]`: The target directory
+
+**Options**:
+
+* `--help`: Show this message and exit.
 
 ### `dreadnode agent deploy`
 
-Start a new run using the latest agent version
+Start a new run using the latest active agent version
 
 **Usage**:
 
@@ -90,11 +110,12 @@ $ dreadnode agent init [OPTIONS] STRIKE
 * `-n, --name TEXT`: The project name (used for container naming)
 * `-t, --template [rigging_basic|rigging_loop|nerve_basic]`: The template to use for the agent  [default: rigging_basic]
 * `-s, --source TEXT`: Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder
+* `-p, --path TEXT`: If --source has been provided, use --path to specify a subfolder to initialize from
 * `--help`: Show this message and exit.
 
 ### `dreadnode agent latest`
 
-Show the latest run of the currently active agent
+Show the latest run of the active agent
 
 **Usage**:
 
@@ -112,7 +133,7 @@ $ dreadnode agent latest [OPTIONS]
 
 ### `dreadnode agent links`
 
-List all available links
+List available agent links
 
 **Usage**:
 
@@ -149,7 +170,7 @@ $ dreadnode agent models [OPTIONS] [DIRECTORY]
 
 ### `dreadnode agent push`
 
-Push a new version of the agent.
+Push a new version of the active agent
 
 **Usage**:
 
@@ -164,11 +185,12 @@ $ dreadnode agent push [OPTIONS]
 * `-e, --env-var TEXT`: Environment vars to use when executing the image (key=value)
 * `-n, --new`: Create a new agent instead of a new version
 * `-m, --message TEXT`: Notes for the new version
+* `-r, --rebuild`: Force rebuild the agent image
 * `--help`: Show this message and exit.
 
 ### `dreadnode agent runs`
 
-List all runs for the currently active agent
+List runs for the active agent
 
 **Usage**:
 
@@ -186,7 +208,7 @@ $ dreadnode agent runs [OPTIONS] [DIRECTORY]
 
 ### `dreadnode agent show`
 
-Show the status of the currently active agent
+Show the status of the active agent
 
 **Usage**:
 
@@ -201,7 +223,7 @@ $ dreadnode agent show [OPTIONS]
 
 ### `dreadnode agent strikes`
 
-List all strikes
+List available strikes
 
 **Usage**:
 
@@ -215,17 +237,17 @@ $ dreadnode agent strikes [OPTIONS]
 
 ### `dreadnode agent switch`
 
-Switch/link to a different agent
+Switch to a different agent link
 
 **Usage**:
 
 ```console
-$ dreadnode agent switch [OPTIONS] AGENT [DIRECTORY]
+$ dreadnode agent switch [OPTIONS] AGENT_OR_PROFILE [DIRECTORY]
 ```
 
 **Arguments**:
 
-* `AGENT`: Agent key or id  [required]
+* `AGENT_OR_PROFILE`: Agent key/id or profile name  [required]
 * `[DIRECTORY]`: The agent directory  [default: .]
 
 **Options**:
@@ -234,7 +256,7 @@ $ dreadnode agent switch [OPTIONS] AGENT [DIRECTORY]
 
 ### `dreadnode agent templates`
 
-List all available templates with their descriptions
+List available agent templates with their descriptions
 
 **Usage**:
 
@@ -248,7 +270,7 @@ $ dreadnode agent templates [OPTIONS]
 
 ### `dreadnode agent versions`
 
-List historical versions of this agent
+List historical versions of the active agent
 
 **Usage**:
 
