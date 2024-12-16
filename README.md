@@ -13,10 +13,16 @@ Dreadnode command line interface
 </h3>
 
 <h4 align="center">
-    <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/dreadnode-cli">
-    <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/dreadnode-cli">
-    <img alt="GitHub License" src="https://img.shields.io/github/license/dreadnode/cli">
-    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/dreadnode/cli/ci.yml">
+    <a href="https://pypi.org/project/dreadnode-cli/" target="_blank">
+        <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/dreadnode-cli">
+        <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/dreadnode-cli">
+    </a>
+    <a href="https://github.com/dreadnode/cli/blob/main/LICENSE" target="_blank">
+        <img alt="GitHub License" src="https://img.shields.io/github/license/dreadnode/cli">
+    </a>
+    <a href="https://github.com/dreadnode/cli/actions/workflows/ci.yml">
+        <img alt="GitHub Actions Workflow Status" src="https://github.com/dreadnode/cli/actions/workflows/ci.yml/badge.svg">
+    </a>
 </h4>
 
 </br>
