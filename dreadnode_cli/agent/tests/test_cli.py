@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from dreadnode_cli.agent.cli import get_repo_archive_source_path
+from dreadnode_cli.utils import get_repo_archive_source_path
 
 
 def test_get_repo_archive_source_path_from_repo(tmp_path: Path) -> None:

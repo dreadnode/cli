@@ -13,7 +13,6 @@ import httpx
 from rich import print
 
 from dreadnode_cli.defaults import DEBUG
-from dreadnode_cli.types import GithubRepo
 
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
@@ -68,10 +67,18 @@ def parse_jwt_token_expiration(token: str) -> datetime:
     return datetime.fromtimestamp(json.loads(payload).get("exp"))
 
 
-def repo_exists(repo: GithubRepo) -> bool:
-    """Check if a repo exists (or is private) on GitHub."""
-    response = httpx.get(f"https://github.com/{repo.namespace}/{repo.repo}")
-    return response.status_code == 200
+def get_repo_archive_source_path(source_dir: pathlib.Path) -> pathlib.Path:
+    """Return the actual source directory from a git repositoryZIP archive."""
+
+    if not (source_dir / "Dockerfile").exists() and not (source_dir / "Dockerfile.j2").exists():
+        # if src has been downloaded from a ZIP archive, it may contain a single
+        # '<user>-<repo>-<commit hash>' folder, that is the actual source we want to use.
+        # Check if source_dir contains only one folder and update it if so.
+        children = list(source_dir.iterdir())
+        if len(children) == 1 and children[0].is_dir():
+            source_dir = children[0]
+
+    return source_dir
 
 
 def download_and_unzip_archive(url: str, *, headers: dict[str, str] | None = None) -> pathlib.Path:

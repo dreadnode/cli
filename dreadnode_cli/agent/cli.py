@@ -20,15 +20,17 @@ from dreadnode_cli.agent.format import (
     format_run,
     format_runs,
     format_strikes,
-    format_templates,
 )
-from dreadnode_cli.agent.templates import Template, install_template, install_template_from_dir
+from dreadnode_cli.agent.templates import cli as templates_cli
+from dreadnode_cli.agent.templates.manager import TemplateManager
 from dreadnode_cli.config import UserConfig
 from dreadnode_cli.profile.cli import switch as switch_profile
 from dreadnode_cli.types import GithubRepo
-from dreadnode_cli.utils import download_and_unzip_archive, pretty_cli, repo_exists
+from dreadnode_cli.utils import download_and_unzip_archive, get_repo_archive_source_path, pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
+
+cli.add_typer(templates_cli, name="templates", help="Interact with Strike templates")
 
 
 def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None = None) -> None:
@@ -66,26 +68,6 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         switch_profile(agent_config.active_link.profile)
 
 
-def get_repo_archive_source_path(source_dir: pathlib.Path) -> pathlib.Path:
-    """Return the actual source directory from a git repositoryZIP archive."""
-
-    if not (source_dir / "Dockerfile").exists() and not (source_dir / "Dockerfile.j2").exists():
-        # if src has been downloaded from a ZIP archive, it may contain a single
-        # '<user>-<repo>-<commit hash>' folder, that is the actual source we want to use.
-        # Check if source_dir contains only one folder and update it if so.
-        children = list(source_dir.iterdir())
-        if len(children) == 1 and children[0].is_dir():
-            source_dir = children[0]
-
-    return source_dir
-
-
-@cli.command(help="List available agent templates with their descriptions")
-@pretty_cli
-def templates() -> None:
-    print(format_templates())
-
-
 @cli.command(help="Initialize a new agent project")
 @pretty_cli
 def init(
@@ -98,8 +80,8 @@ def init(
         str | None, typer.Option("--name", "-n", help="The project name (used for container naming)")
     ] = None,
     template: t.Annotated[
-        Template, typer.Option("--template", "-t", help="The template to use for the agent")
-    ] = Template.rigging_basic,
+        str | None, typer.Option("--template", "-t", help="The template to use for the agent")
+    ] = None,
     source: t.Annotated[
         str | None,
         typer.Option(
@@ -137,18 +119,49 @@ def init(
     print(f":crossed_swords: Linking to strike '{strike_response.name}' ({strike_response.type})")
     print()
 
-    project_name = Prompt.ask("Project name?", default=name or directory.name)
+    project_name = Prompt.ask(":toolbox: Project name?", default=name or directory.name)
     print()
 
     directory.mkdir(exist_ok=True)
 
+    template_manager = TemplateManager()
     context = {"project_name": project_name, "strike": strike_response}
 
     if source is None:
-        # initialize from builtin template
-        template = Template(Prompt.ask("Template?", choices=[t.value for t in Template], default=template.value))
+        # get the templates that match the strike
+        available_templates = template_manager.get_templates_for_strike(strike_response.name, strike_response.type)
+        available: list[str] = list(available_templates.keys())
 
-        install_template(template, directory, context)
+        # none available
+        if not available:
+            if not template_manager.templates:
+                raise Exception(
+                    "No templates installed, use [bold]dreadnode agent templates install[/] to install some."
+                )
+            else:
+                raise Exception("No templates found for the given strike.")
+
+        # ask the user if the template has not been passed via command line
+        if template is None:
+            print(":notebook: Compatible templates:\n")
+            for i, template_name in enumerate(available):
+                print(
+                    f"{i + 1}. {template_name} ([dim]{template_manager.templates[template_name].manifest.description}[/])"
+                )
+
+            print()
+
+            choice = Prompt.ask("Choice: ", choices=[str(i + 1) for i in range(len(available))])
+            template = available[int(choice) - 1]
+
+        # validate the template
+        if template not in available:
+            raise Exception(
+                f"Template '{template}' not found, use [bold]dreadnode agent templates show[/] to see available templates."
+            )
+
+        # install the template
+        template_manager.install(template, directory, context)
     else:
         source_dir = pathlib.Path(source)
         cleanup = False
@@ -162,7 +175,7 @@ def init(
                 github_repo = GithubRepo(source)
 
                 # Check if the repo is accessible
-                if repo_exists(github_repo):
+                if github_repo.exists:
                     source_dir = download_and_unzip_archive(github_repo.zip_url)
 
                 # This could be a private repo that the user can access
@@ -193,7 +206,8 @@ def init(
             if path is not None:
                 source_dir = source_dir / path
 
-            install_template_from_dir(source_dir, directory, context)
+            # install the template
+            template_manager.install_from_dir(source_dir, directory, context)
         except Exception:
             if cleanup and source_dir.exists():
                 shutil.rmtree(source_dir)
@@ -521,7 +535,7 @@ def clone(
         shutil.rmtree(target)
 
     # Check if the repo is accessible
-    if repo_exists(github_repo):
+    if github_repo.exists:
         temp_dir = download_and_unzip_archive(github_repo.zip_url)
 
     # This could be a private repo that the user can access

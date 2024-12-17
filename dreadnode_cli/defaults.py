@@ -25,6 +25,18 @@ USER_CONFIG_PATH = pathlib.Path(
     os.getenv("DREADNODE_USER_CONFIG_FILE") or pathlib.Path.home() / ".dreadnode" / "config"
 )
 
+# path to the templates directory
+TEMPLATES_PATH = pathlib.Path(
+    # allow overriding the templates path via env variable
+    os.getenv("DREADNODE_TEMPLATES_PATH") or pathlib.Path.home() / ".dreadnode" / "templates"
+)
+
+# name of the agent templates manifest file
+TEMPLATE_MANIFEST_FILE = "manifest.yaml"
+
+# default template repository
+TEMPLATES_DEFAULT_REPO = "dreadnode/basic-agents"
+
 #
 # Constants
 #

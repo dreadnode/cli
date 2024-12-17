@@ -1,6 +1,8 @@
 import re
 import typing as t
 
+import httpx
+
 
 class GithubRepo(str):
     """
@@ -131,6 +133,12 @@ class GithubRepo(str):
     def tree_url(self) -> str:
         """URL to view the tree at this reference."""
         return f"https://github.com/{self.namespace}/{self.repo}/tree/{self.ref}"
+
+    @property
+    def exists(self) -> bool:
+        """Check if a repo exists (or is private) on GitHub."""
+        response = httpx.get(f"https://github.com/{self.namespace}/{self.repo}")
+        return response.status_code == 200
 
     def __repr__(self) -> str:
         return f"GithubRepo(namespace='{self.namespace}', repo='{self.repo}', ref='{self.ref}')"
