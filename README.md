@@ -139,7 +139,10 @@ Interact with Strike agents:
 dreadnode agent strikes
 
 # list all available templates with their descriptions
-dreadnode agent templates
+dreadnode agent templates show
+
+# install a template pack from a github repository
+dreadnode agent templates install dreadnode/basic-templates
 
 # initialize a new agent in the current directory
 dreadnode agent init -t <template_name> <strike_id> 

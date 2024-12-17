@@ -50,7 +50,7 @@ $ dreadnode agent [OPTIONS] COMMAND [ARGS]...
 * `show`: Show the status of the active agent
 * `strikes`: List available strikes
 * `switch`: Switch to a different agent link
-* `templates`: List available agent templates with their...
+* `templates`: Interact with Strike templates
 * `versions`: List historical versions of the active agent
 
 ### `dreadnode agent clone`
@@ -108,7 +108,7 @@ $ dreadnode agent init [OPTIONS] STRIKE
 
 * `-d, --dir DIRECTORY`: The directory to initialize  [default: .]
 * `-n, --name TEXT`: The project name (used for container naming)
-* `-t, --template [rigging_basic|rigging_loop|nerve_basic]`: The template to use for the agent  [default: rigging_basic]
+* `-t, --template TEXT`: The template to use for the agent
 * `-s, --source TEXT`: Initialize the agent using a custom template from a github repository, ZIP archive URL or local folder
 * `-p, --path TEXT`: If --source has been provided, use --path to specify a subfolder to initialize from
 * `--help`: Show this message and exit.
@@ -256,12 +256,49 @@ $ dreadnode agent switch [OPTIONS] AGENT_OR_PROFILE [DIRECTORY]
 
 ### `dreadnode agent templates`
 
+Interact with Strike templates
+
+**Usage**:
+
+```console
+$ dreadnode agent templates [OPTIONS] COMMAND [ARGS]...
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+**Commands**:
+
+* `install`: Install a template pack
+* `show`: List available agent templates with their...
+
+#### `dreadnode agent templates install`
+
+Install a template pack
+
+**Usage**:
+
+```console
+$ dreadnode agent templates install [OPTIONS] [SOURCE]
+```
+
+**Arguments**:
+
+* `[SOURCE]`: The source of the template pack  [default: dreadnode/basic-agents]
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+#### `dreadnode agent templates show`
+
 List available agent templates with their descriptions
 
 **Usage**:
 
 ```console
-$ dreadnode agent templates [OPTIONS]
+$ dreadnode agent templates show [OPTIONS]
 ```
 
 **Options**:
