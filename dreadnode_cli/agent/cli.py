@@ -22,6 +22,7 @@ from dreadnode_cli.agent.format import (
     format_strikes,
 )
 from dreadnode_cli.agent.templates import cli as templates_cli
+from dreadnode_cli.agent.templates.format import format_templates
 from dreadnode_cli.agent.templates.manager import TemplateManager
 from dreadnode_cli.config import UserConfig
 from dreadnode_cli.profile.cli import switch as switch_profile
@@ -144,14 +145,10 @@ def init(
         # ask the user if the template has not been passed via command line
         if template is None:
             print(":notebook: Compatible templates:\n")
-            for i, template_name in enumerate(available):
-                print(
-                    f"{i + 1}. {template_name} ([dim]{template_manager.templates[template_name].manifest.description}[/])"
-                )
-
+            print(format_templates(available_templates, with_index=True))
             print()
 
-            choice = Prompt.ask("Choice: ", choices=[str(i + 1) for i in range(len(available))])
+            choice = Prompt.ask("Choice ", choices=[str(i + 1) for i in range(len(available))])
             template = available[int(choice) - 1]
 
         # validate the template
