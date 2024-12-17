@@ -328,11 +328,18 @@ def deploy(
         print(formatted)
         return
 
-    with Live(formatted, refresh_per_second=2) as live:
-        while run.is_running():
-            time.sleep(1)
-            run = client.get_strike_run(run.id)
-            live.update(format_run(run))
+    try:
+        with Live(formatted, refresh_per_second=2) as live:
+            while run.is_running():
+                time.sleep(1)
+                run = client.get_strike_run(run.id)
+                live.update(format_run(run))
+    except KeyboardInterrupt:
+        print("\n:warning: Terminating run...")
+        client.terminate_strike_run(run.id)
+        run = client.get_strike_run(run.id)
+        print(format_run(run))
+        return
 
 
 @cli.command(help="List available models for the current (or specified) strike")

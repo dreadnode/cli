@@ -448,6 +448,11 @@ class Client:
         response = self.request("GET", f"/api/strikes/runs/{run}")
         return self.StrikeRunResponse(**response.json())
 
+    def terminate_strike_run(self, run: UUID | str) -> StrikeRunResponse:
+        """Terminate a running strike."""
+        response = self.request("POST", f"/api/strikes/runs/{run}/terminate")
+        return self.StrikeRunResponse(**response.json())
+
     def list_strike_runs(self, *, strike_id: UUID | str | None = None) -> list[StrikeRunSummaryResponse]:
         response = self.request(
             "GET", "/api/strikes/runs", query_params={"strike_id": str(strike_id)} if strike_id else None
