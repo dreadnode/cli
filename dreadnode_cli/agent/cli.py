@@ -255,7 +255,15 @@ def push(
     print()
     print(f":wrench: Building agent from [b]{directory}[/] ...")
     image = docker.build(directory, force_rebuild=rebuild)
-    repository = f"{registry}/{server_config.username}/agents/{agent_config.project_name}"
+    agent_name = docker.sanitized_agent_name(agent_config.project_name)
+
+    if not agent_name:
+        raise Exception("Failed to sanitize agent name, please use a different name")
+
+    elif agent_name != agent_config.project_name:
+        print(f":four_leaf_clover: Agent name normalized to [bold magenta]{agent_name}[/]")
+
+    repository = f"{registry}/{server_config.username}/agents/{agent_name}"
     tag = tag or image.id[-8:]
 
     print()
