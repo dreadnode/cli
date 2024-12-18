@@ -337,7 +337,6 @@ class Client:
         data: dict[str, t.Any]
 
     class _StrikeRunZone(BaseModel):
-        id: UUID
         key: str
         status: "Client.StrikeRunZoneStatus"
         start: datetime | None
