@@ -1,4 +1,0 @@
-httpx
-rigging
-pydantic
-loguru

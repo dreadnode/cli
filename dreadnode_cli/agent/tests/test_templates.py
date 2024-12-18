@@ -1,26 +1,67 @@
 import pathlib
-from unittest.mock import patch
 
 import pytest
 
-from dreadnode_cli.agent import templates
+from dreadnode_cli.agent.templates.manager import TemplateManager
 
 
-def test_templates_install(tmp_path: pathlib.Path) -> None:
-    with patch("rich.prompt.Prompt.ask", return_value="y"):
-        templates.install_template(templates.Template.rigging_basic, tmp_path, {"name": "World"})
-
-    assert (tmp_path / "requirements.txt").exists()
-    assert (tmp_path / "Dockerfile").exists()
-    assert (tmp_path / "agent.py").exists()
+def test_manager_is_empty_when_no_templates(tmp_path: pathlib.Path) -> None:
+    assert len(TemplateManager(tmp_path).templates) == 0
 
 
-def test_templates_install_from_dir(tmp_path: pathlib.Path) -> None:
-    templates.install_template_from_dir(templates.TEMPLATES_DIR / "rigging_basic", tmp_path, {"name": "World"})
+def test_manager_is_not_empty_with_test_template(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "test").mkdir()
+    (tmp_path / "test" / "manifest.yaml").write_text("description: test")
+    assert len(TemplateManager(tmp_path).templates) == 1
 
-    assert (tmp_path / "requirements.txt").exists()
-    assert (tmp_path / "Dockerfile").exists()
-    assert (tmp_path / "agent.py").exists()
+
+def test_manager_raises_with_invalid_template(tmp_path: pathlib.Path) -> None:
+    manager = TemplateManager(tmp_path)
+    with pytest.raises(Exception, match="Template '.*' not found"):
+        manager.install("test", tmp_path, {})
+
+
+def test_manager_can_install_valid_template(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "test").mkdir()
+    (tmp_path / "test" / "manifest.yaml").write_text("description: test")
+    (tmp_path / "test" / "Dockerfile.j2").write_text("FROM python:3.9")
+
+    (tmp_path / "destination").mkdir()
+
+    manager = TemplateManager(tmp_path)
+    manager.install("test", tmp_path / "destination", {})
+
+    assert (tmp_path / "destination" / "Dockerfile").exists()
+
+
+def test_manager_returns_empty_list_for_strike(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "test").mkdir()
+    (tmp_path / "test" / "manifest.yaml").write_text("description: test\nstrikes: [foo]")
+    (tmp_path / "test" / "Dockerfile.j2").write_text("FROM python:3.9")
+
+    manager = TemplateManager(tmp_path)
+
+    assert not manager.get_templates_for_strike("test", "test")
+
+
+def test_manager_returns_valid_list_for_strike_name(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "test").mkdir()
+    (tmp_path / "test" / "manifest.yaml").write_text("description: test\nstrikes: [foo]")
+    (tmp_path / "test" / "Dockerfile.j2").write_text("FROM python:3.9")
+
+    manager = TemplateManager(tmp_path)
+
+    assert len(manager.get_templates_for_strike("foo", "test")) == 1
+
+
+def test_manager_returns_valid_list_for_strike_type(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "test").mkdir()
+    (tmp_path / "test" / "manifest.yaml").write_text("description: test\nstrikes_types: [a_type]")
+    (tmp_path / "test" / "Dockerfile.j2").write_text("FROM python:3.9")
+
+    manager = TemplateManager(tmp_path)
+
+    assert len(manager.get_templates_for_strike("foo", "a_type")) == 1
 
 
 def test_templates_install_from_dir_with_dockerfile_template(tmp_path: pathlib.Path) -> None:
@@ -43,7 +84,7 @@ CMD ["python", "app.py"]
     dest_dir.mkdir()
 
     # install template
-    templates.install_template_from_dir(source_dir, dest_dir, {"name": "TestContainer"})
+    TemplateManager().install_from_dir(source_dir, dest_dir, {"name": "TestContainer"})
 
     # verify Dockerfile was rendered correctly
     expected_dockerfile = """
@@ -90,7 +131,7 @@ def test_templates_install_from_dir_nested_structure(tmp_path: pathlib.Path) -> 
     dest_dir.mkdir()
 
     # install template
-    templates.install_template_from_dir(source_dir, dest_dir, {"name": "TestApp"})
+    TemplateManager().install_from_dir(source_dir, dest_dir, {"name": "TestApp"})
 
     # verify regular files were copied
     assert (dest_dir / "Dockerfile").exists()
@@ -108,16 +149,16 @@ def test_templates_install_from_dir_nested_structure(tmp_path: pathlib.Path) -> 
 
 def test_templates_install_from_dir_missing_source(tmp_path: pathlib.Path) -> None:
     source_dir = tmp_path / "nonexistent"
-    with pytest.raises(Exception, match="Source directory '.*' does not exist"):
-        templates.install_template_from_dir(source_dir, tmp_path, {"name": "World"})
+    with pytest.raises(Exception, match="Template directory '.*' does not exist"):
+        TemplateManager().install_from_dir(source_dir, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_source_is_file(tmp_path: pathlib.Path) -> None:
     source_file = tmp_path / "source.txt"
     source_file.touch()
 
-    with pytest.raises(Exception, match="Source '.*' is not a directory"):
-        templates.install_template_from_dir(source_file, tmp_path, {"name": "World"})
+    with pytest.raises(Exception, match="Path '.*' is not a directory"):
+        TemplateManager().install_from_dir(source_file, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_missing_dockerfile(tmp_path: pathlib.Path) -> None:
@@ -125,8 +166,8 @@ def test_templates_install_from_dir_missing_dockerfile(tmp_path: pathlib.Path) -
     source_dir.mkdir()
     (source_dir / "agent.py").touch()
 
-    with pytest.raises(Exception, match="Source directory .+ does not contain a Dockerfile"):
-        templates.install_template_from_dir(source_dir, tmp_path, {"name": "World"})
+    with pytest.raises(Exception, match="Template directory .+ does not contain a Dockerfile"):
+        TemplateManager().install_from_dir(source_dir, tmp_path, {"name": "World"})
 
 
 def test_templates_install_from_dir_single_inner_folder(tmp_path: pathlib.Path) -> None:
@@ -144,7 +185,7 @@ def test_templates_install_from_dir_single_inner_folder(tmp_path: pathlib.Path) 
     dest_dir.mkdir()
 
     # install from the outer directory - should detect and use inner directory
-    templates.install_template_from_dir(inner_dir, dest_dir, {"name": "World"})
+    TemplateManager().install_from_dir(inner_dir, dest_dir, {"name": "World"})
 
     # assert files were copied from inner directory
     assert (dest_dir / "Dockerfile").exists()
@@ -164,7 +205,7 @@ def test_templates_install_from_dir_with_path(tmp_path: pathlib.Path) -> None:
     dest_dir.mkdir()
 
     # install from subdirectory path
-    templates.install_template_from_dir(tmp_path / "source", dest_dir, {"name": "World"})
+    TemplateManager().install_from_dir(tmp_path / "source", dest_dir, {"name": "World"})
 
     # assert files were copied from subdirectory
     assert (dest_dir / "Dockerfile").exists()
@@ -176,5 +217,5 @@ def test_templates_install_from_dir_invalid_path(tmp_path: pathlib.Path) -> None
     source_dir.mkdir()
     (source_dir / "Dockerfile").touch()
 
-    with pytest.raises(Exception, match="Source directory '.*' does not exist"):
-        templates.install_template_from_dir(source_dir / "nonexistent", tmp_path, {"name": "World"})
+    with pytest.raises(Exception, match="Template directory '.*' does not exist"):
+        TemplateManager().install_from_dir(source_dir / "nonexistent", tmp_path, {"name": "World"})
