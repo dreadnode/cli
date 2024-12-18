@@ -192,7 +192,6 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
         if isinstance(zone_score, float):
             zone_score = round(zone_score, 2)
 
-        table.add_row("id", f"[dim]{zone.id}[/]")
         table.add_row("score", f"[yellow]{zone_score}[/]" if zone_score else "[dim]0[/]")
         table.add_row("outputs", f"[magenta]{len(zone.outputs)}[/]" if zone.outputs else "[dim]0[/]")
         table.add_row("inferences", f"[blue]{len(zone.inferences)}[/]" if zone.inferences else "[dim]0[/]")
