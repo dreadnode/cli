@@ -1,4 +1,5 @@
 import pathlib
+import re
 import typing as t
 
 import docker  # type: ignore
@@ -61,6 +62,23 @@ def login(registry: str, username: str, password: str) -> None:
         raise Exception("Docker not available")
 
     client.api.login(username=username, password=password, registry=registry)
+
+
+def sanitized_agent_name(name: str) -> str:
+    """
+    Sanitizes an agent name to be used as a Docker repository name.
+    """
+
+    # convert to lowercase
+    name = name.lower()
+    # replace non-alphanumeric characters with hyphens
+    name = re.sub(r"[^\w\s-]", "", name)
+    # replace one or more whitespace characters with a single hyphen
+    name = re.sub(r"[-\s]+", "-", name)
+    # remove leading or trailing hyphens
+    name = name.strip("-")
+
+    return name
 
 
 def build(directory: str | pathlib.Path, *, force_rebuild: bool = False) -> Image:
