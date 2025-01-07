@@ -1,6 +1,7 @@
 name: Publish
 
 on:
+  workflow_dispatch:
   push:
     tags: ["v*"]
 
@@ -23,6 +24,8 @@ jobs:
 
       - name: Install Poetry
         uses: abatilo/actions-poetry@e78f54a89cb052fff327414dd9ff010b5d2b4dbd
+        with:
+          poetry-version: "1.8.4"
 
       - name: Configure Poetry
         run: |
