@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "dreadnode-cli"
-version = "0.0.2"
+version = "0.1.0"
 description = "Dreadnode CLI"
 authors = [
     "Nick Landers <monoxgas@gmail.com>",
-    "Simone Margaritelli <evilsocket@gmail.com>"
+    "Simone Margaritelli <evilsocket@gmail.com>",
 ]
 license = "MIT"
 repository = "https://github.com/dreadnode/cli"
