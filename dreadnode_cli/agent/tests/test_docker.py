@@ -176,26 +176,26 @@ def test_get_registry_custom_platform_base_domain() -> None:
         assert docker.get_registry(config) == "dev-registry.example.com"
 
 
-def test_sanitized_agent_name() -> None:
+def test_sanitized_name() -> None:
     # Test basic name
-    assert docker.sanitized_agent_name("test-agent") == "test-agent"
-    assert docker.sanitized_agent_name("test- agent") == "test-agent"
-    assert docker.sanitized_agent_name("test_agent") == "test_agent"
+    assert docker.sanitized_name("test-agent") == "test-agent"
+    assert docker.sanitized_name("test- agent") == "test-agent"
+    assert docker.sanitized_name("test_agent") == "test_agent"
 
     # Test spaces
-    assert docker.sanitized_agent_name("test agent") == "test-agent"
-    assert docker.sanitized_agent_name("test  multiple    spaces") == "test-multiple-spaces"
+    assert docker.sanitized_name("test agent") == "test-agent"
+    assert docker.sanitized_name("test  multiple    spaces") == "test-multiple-spaces"
 
     # Test special characters
-    assert docker.sanitized_agent_name("test!@#$%^&*()agent") == "testagent"
-    assert docker.sanitized_agent_name("test_agent.123") == "test_agent123"
-    assert docker.sanitized_agent_name("test/agent\\path") == "testagentpath"
+    assert docker.sanitized_name("test!@#$%^&*()agent") == "testagent"
+    assert docker.sanitized_name("test_agent.123") == "test_agent123"
+    assert docker.sanitized_name("test/agent\\path") == "testagentpath"
 
     # Test mixed case
-    assert docker.sanitized_agent_name("TestAgent") == "testagent"
-    assert docker.sanitized_agent_name("TEST AGENT") == "test-agent"
+    assert docker.sanitized_name("TestAgent") == "testagent"
+    assert docker.sanitized_name("TEST AGENT") == "test-agent"
 
     # Test edge cases
-    assert docker.sanitized_agent_name("   spaced   name   ") == "spaced-name"
-    assert docker.sanitized_agent_name("!!!###") == ""
-    assert docker.sanitized_agent_name("123 456") == "123-456"
+    assert docker.sanitized_name("   spaced   name   ") == "spaced-name"
+    assert docker.sanitized_name("!!!###") == ""
+    assert docker.sanitized_name("123 456") == "123-456"
