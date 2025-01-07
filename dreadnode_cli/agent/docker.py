@@ -64,9 +64,9 @@ def login(registry: str, username: str, password: str) -> None:
     client.api.login(username=username, password=password, registry=registry)
 
 
-def sanitized_agent_name(name: str) -> str:
+def sanitized_name(name: str) -> str:
     """
-    Sanitizes an agent name to be used as a Docker repository name.
+    Sanitizes an agent or user name to be used in a Docker repository URI.
     """
 
     # convert to lowercase
