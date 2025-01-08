@@ -293,7 +293,7 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
 
     table.add_row("", "")
     # um@ is added to indicate a user model
-    table.add_row("model", run.model.replace("um@", "") or "<default>")
+    table.add_row("model", run.model.replace("um@", "") if run.model else "<default>")
     table.add_row("agent", f"{agent_name} ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
     table.add_row("notes", run.agent_version.notes or "-")
@@ -326,7 +326,7 @@ def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableTy
             f"[bold magenta]{run.agent_key}[/] [dim]:[/] [yellow]{run.agent_revision}[/]",
             Text(run.status, style="bold " + get_status_style(run.status)),
             # um@ is added to indicate a user model
-            Text(run.model.replace("um@", "") or "-"),
+            Text(run.model.replace("um@", "") if run.model else "-"),
             format_time(run.start),
             Text(format_duration(run.start, run.end), style="bold cyan"),
         )
