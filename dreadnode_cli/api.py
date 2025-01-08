@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from rich import print
 
 from dreadnode_cli import __version__, utils
-from dreadnode_cli.config import UserConfig, UserModel
+from dreadnode_cli.config import UserConfig
 from dreadnode_cli.defaults import (
     DEBUG,
     DEFAULT_MAX_POLL_TIME,
@@ -430,12 +430,7 @@ class Client:
         return self.StrikeAgentResponse(**response.json())
 
     def start_strike_run(
-        self,
-        agent_version_id: UUID,
-        *,
-        model: str | None = None,
-        user_model: UserModel | None = None,
-        strike: UUID | str | None = None,
+        self, agent_version_id: UUID, *, model: str | None = None, strike: UUID | str | None = None
     ) -> StrikeRunResponse:
         response = self.request(
             "POST",
@@ -443,7 +438,6 @@ class Client:
             json_data={
                 "agent_version_id": str(agent_version_id),
                 "model": model,
-                "user_model": user_model.model_dump(mode="json") if user_model else None,
                 "strike": str(strike) if strike else None,
             },
         )

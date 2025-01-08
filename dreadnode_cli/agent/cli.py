@@ -16,16 +16,15 @@ from dreadnode_cli.agent.docker import get_registry
 from dreadnode_cli.agent.format import (
     format_agent,
     format_agent_versions,
+    format_models,
     format_run,
     format_runs,
-    format_strike_models,
     format_strikes,
-    format_user_models,
 )
 from dreadnode_cli.agent.templates import cli as templates_cli
 from dreadnode_cli.agent.templates.format import format_templates
 from dreadnode_cli.agent.templates.manager import TemplateManager
-from dreadnode_cli.config import UserConfig, UserModel, UserModels
+from dreadnode_cli.config import UserConfig
 from dreadnode_cli.profile.cli import switch as switch_profile
 from dreadnode_cli.types import GithubRepo
 from dreadnode_cli.utils import download_and_unzip_archive, get_repo_archive_source_path, pretty_cli
@@ -340,22 +339,14 @@ def deploy(
     if strike is None:
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
 
-    user_models = UserModels.read()
-    user_model: UserModel | None = None
-
     # Verify the model if it was supplied
     if model is not None:
-        # check if it's a user model
-        user_model = next((m for m in user_models.models if m.key == model), None)
-        if not user_model:
-            # check if it's a strike model
-            strike_response = client.get_strike(strike)
-            if not any(m.key == model for m in strike_response.models):
-                models(directory, strike=strike)
-                print()
-                raise Exception(f"Model '{model}' is not a user model nor was found in strike '{strike_response.name}'")
+        strike_response = client.get_strike(strike)
+        if not any(m.key == model for m in strike_response.models):
+            print(format_models(strike_response.models))
+            raise Exception(f"Model '{model}' not found in strike '{strike_response.name}'")
 
-    run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model, user_model=user_model)
+    run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model)
     agent_config.add_run(run.id).write(directory)
     formatted = format_run(run)
 
@@ -378,11 +369,6 @@ def models(
     ] = pathlib.Path("."),
     strike: t.Annotated[str | None, typer.Option("--strike", "-s", help="The strike to query")] = None,
 ) -> None:
-    user_models = UserModels.read()
-    if user_models.models:
-        print("[bold]User models:[/]\n")
-        print(format_user_models(user_models.models))
-
     if strike is None:
         agent_config = AgentConfig.read(directory)
         ensure_profile(agent_config)
@@ -392,9 +378,7 @@ def models(
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
 
     strike_response = api.create_client().get_strike(strike)
-    if user_models.models:
-        print("\n[bold]Strike models:[/]\n")
-    print(format_strike_models(strike_response.models))
+    print(format_models(strike_response.models))
 
 
 @cli.command(help="List available strikes")

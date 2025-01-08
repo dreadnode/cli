@@ -25,12 +25,6 @@ USER_CONFIG_PATH = pathlib.Path(
     os.getenv("DREADNODE_USER_CONFIG_FILE") or pathlib.Path.home() / ".dreadnode" / "config"
 )
 
-# path to the user models configuration file
-USER_MODELS_CONFIG_PATH = pathlib.Path(
-    # allow overriding the user config file via env variable
-    os.getenv("DREADNODE_USER_CONFIG_FILE") or pathlib.Path.home() / ".dreadnode" / "models.yml"
-)
-
 # path to the templates directory
 TEMPLATES_PATH = pathlib.Path(
     # allow overriding the templates path via env variable

@@ -9,7 +9,6 @@ from rich.table import Table
 from rich.text import Text
 
 from dreadnode_cli import api
-from dreadnode_cli.config import UserModel
 
 P = t.ParamSpec("P")
 
@@ -63,26 +62,7 @@ def format_time(dt: datetime | None) -> str:
     return dt.astimezone().strftime("%c") if dt else "-"
 
 
-def format_user_models(models: list[UserModel]) -> RenderableType:
-    table = Table(box=box.ROUNDED)
-    table.add_column("key")
-    table.add_column("name")
-    table.add_column("provider")
-    table.add_column("api_key")
-
-    for model in models:
-        provider_style = get_model_provider_style(model.provider)
-        table.add_row(
-            Text(model.key),
-            Text(model.name, style=f"bold {provider_style}"),
-            Text(model.provider, style=provider_style),
-            Text("yes" if model.api_key else "no", style="green" if model.api_key else "dim"),
-        )
-
-    return table
-
-
-def format_strike_models(models: list[api.Client.StrikeModel]) -> RenderableType:
+def format_models(models: list[api.Client.StrikeModel]) -> RenderableType:
     table = Table(box=box.ROUNDED)
     table.add_column("key")
     table.add_column("name")
@@ -292,8 +272,7 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
         agent_name = f"[bold magenta]{run.agent_key}[/]"
 
     table.add_row("", "")
-    # um@ is added to indicate a user model
-    table.add_row("model", run.model.replace("um@", "") if run.model else "<default>")
+    table.add_row("model", run.model or "<default>")
     table.add_row("agent", f"{agent_name} ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
     table.add_row("notes", run.agent_version.notes or "-")
@@ -325,8 +304,7 @@ def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableTy
             str(run.id),
             f"[bold magenta]{run.agent_key}[/] [dim]:[/] [yellow]{run.agent_revision}[/]",
             Text(run.status, style="bold " + get_status_style(run.status)),
-            # um@ is added to indicate a user model
-            Text(run.model.replace("um@", "") if run.model else "-"),
+            Text(run.model or "-"),
             format_time(run.start),
             Text(format_duration(run.start, run.end), style="bold cyan"),
         )
