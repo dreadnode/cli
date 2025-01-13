@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from rich import print
 from ruamel.yaml import YAML
 
-from dreadnode_cli.defaults import DEFAULT_PROFILE_NAME, USER_CONFIG_PATH, USER_MODELS_CONFIG_PATH
+from dreadnode_cli.defaults import DEFAULT_PROFILE_NAME, USER_CONFIG_PATH
 
 
 class ServerConfig(BaseModel):
@@ -74,31 +74,3 @@ class UserConfig(BaseModel):
         profile = profile or self.active or DEFAULT_PROFILE_NAME
         self.servers[profile] = config
         return self
-
-
-class UserModel(BaseModel):
-    """
-    A user defined model.
-    """
-
-    key: str
-    name: str
-    provider: str
-    generator_id: str
-    api_key: str | None = None
-
-
-class UserModels(BaseModel):
-    """User models configuration."""
-
-    models: list[UserModel] = []
-
-    @classmethod
-    def read(cls) -> "UserModels":
-        """Read the user models configuration from the file system or return an empty instance."""
-
-        if not USER_MODELS_CONFIG_PATH.exists():
-            return cls()
-
-        with USER_MODELS_CONFIG_PATH.open("r") as f:
-            return cls.model_validate(YAML().load(f))

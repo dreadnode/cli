@@ -9,6 +9,7 @@ from dreadnode_cli.agent import cli as agent_cli
 from dreadnode_cli.challenge import cli as challenge_cli
 from dreadnode_cli.config import ServerConfig, UserConfig
 from dreadnode_cli.defaults import PLATFORM_BASE_URL
+from dreadnode_cli.model import cli as models_cli
 from dreadnode_cli.profile import cli as profile_cli
 from dreadnode_cli.utils import pretty_cli
 
@@ -21,6 +22,7 @@ cli = typer.Typer(
 cli.add_typer(profile_cli, name="profile", help="Manage server profiles")
 cli.add_typer(challenge_cli, name="challenge", help="Interact with Crucible challenges")
 cli.add_typer(agent_cli, name="agent", help="Interact with Strike agents")
+cli.add_typer(models_cli, name="model", help="Manage user-defined inference models")
 
 
 @cli.command(help="Authenticate to the platform.")

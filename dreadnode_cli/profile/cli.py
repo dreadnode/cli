@@ -7,14 +7,15 @@ from rich.table import Table
 from dreadnode_cli import utils
 from dreadnode_cli.api import Token
 from dreadnode_cli.config import UserConfig
+from dreadnode_cli.ext.typer import AliasGroup
 from dreadnode_cli.utils import pretty_cli
 
-cli = typer.Typer(no_args_is_help=True)
+cli = typer.Typer(no_args_is_help=True, cls=AliasGroup)
 
 
-@cli.command(help="List all server profiles")
+@cli.command("show|list", help="List all server profiles")
 @pretty_cli
-def list() -> None:
+def show() -> None:
     config = UserConfig.read()
     if not config.servers:
         print(":exclamation: No server profiles are configured")
@@ -45,7 +46,7 @@ def list() -> None:
     print(table)
 
 
-@cli.command(help="Set the active server profile")
+@cli.command(help="Set the active server profile", no_args_is_help=True)
 @pretty_cli
 def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")]) -> None:
     config = UserConfig.read()
@@ -63,7 +64,7 @@ def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")
     print()
 
 
-@cli.command(help="Remove a server profile")
+@cli.command(help="Remove a server profile", no_args_is_help=True)
 @pretty_cli
 def forget(profile: t.Annotated[str, typer.Argument(help="Profile of the server to remove")]) -> None:
     config = UserConfig.read()

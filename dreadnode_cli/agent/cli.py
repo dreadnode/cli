@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 import time
@@ -20,19 +21,21 @@ from dreadnode_cli.agent.format import (
     format_runs,
     format_strike_models,
     format_strikes,
-    format_user_models,
 )
 from dreadnode_cli.agent.templates import cli as templates_cli
 from dreadnode_cli.agent.templates.format import format_templates
 from dreadnode_cli.agent.templates.manager import TemplateManager
-from dreadnode_cli.config import UserConfig, UserModel, UserModels
+from dreadnode_cli.api import Client
+from dreadnode_cli.config import UserConfig
+from dreadnode_cli.model.config import UserModels
+from dreadnode_cli.model.format import format_user_models
 from dreadnode_cli.profile.cli import switch as switch_profile
 from dreadnode_cli.types import GithubRepo
 from dreadnode_cli.utils import download_and_unzip_archive, get_repo_archive_source_path, pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
 
-cli.add_typer(templates_cli, name="templates", help="Interact with Strike templates")
+cli.add_typer(templates_cli, name="templates", help="Manage Agent templates")
 
 
 def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None = None) -> None:
@@ -48,8 +51,8 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         plural = "s" if len(agent_config.linked_profiles) > 1 else ""
         raise Exception(
             f"This agent is linked to the [magenta]{linked_profiles}[/] server profile{plural}, "
-            f"but the current server profile is [yellow]{user_config.active_profile_name}[/], ",
-            "use [bold]dreadnode agent push[/] to create a new link with this profile.",
+            f"but the current server profile is [yellow]{user_config.active_profile_name}[/], "
+            "use [bold]dreadnode agent push[/] to create a new link with this profile."
         )
 
     if agent_config.active_link.profile != user_config.active_profile_name:
@@ -70,7 +73,7 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         switch_profile(agent_config.active_link.profile)
 
 
-@cli.command(help="Initialize a new agent project")
+@cli.command(help="Initialize a new agent project", no_args_is_help=True)
 @pretty_cli
 def init(
     strike: t.Annotated[str, typer.Argument(help="The target strike")],
@@ -341,19 +344,34 @@ def deploy(
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
 
     user_models = UserModels.read()
-    user_model: UserModel | None = None
+    user_model: Client.UserModel | None = None
 
-    # Verify the model if it was supplied
-    if model is not None:
-        # check if it's a user model
-        user_model = next((m for m in user_models.models if m.key == model), None)
-        if not user_model:
-            # check if it's a strike model
-            strike_response = client.get_strike(strike)
-            if not any(m.key == model for m in strike_response.models):
-                models(directory, strike=strike)
-                print()
-                raise Exception(f"Model '{model}' is not a user model nor was found in strike '{strike_response.name}'")
+    # Check for a user-defined model
+    if model in user_models.models:
+        user_model = Client.UserModel(
+            key=model,
+            generator_id=user_models.models[model].generator_id,
+            api_key=user_models.models[model].api_key,
+        )
+
+        # Resolve the API key from env vars
+        if user_model.api_key.startswith("$"):
+            try:
+                user_model.api_key = os.environ[user_model.api_key[1:]]
+            except KeyError as e:
+                raise Exception(
+                    f"API key cannot be read from '{user_model.api_key}', environment variable not found."
+                ) from e
+
+    # Otherwise we'll ensure this is a valid strike-native model
+    if user_model is None and model is not None:
+        strike_response = client.get_strike(strike)
+        if not any(m.key == model for m in strike_response.models):
+            models(directory, strike=strike)
+            print()
+            raise Exception(
+                f"Model '{model}' is not user-defined nor is it available in strike '{strike_response.name}'"
+            )
 
     run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model, user_model=user_model)
     agent_config.add_run(run.id).write(directory)
@@ -380,20 +398,21 @@ def models(
 ) -> None:
     user_models = UserModels.read()
     if user_models.models:
-        print("[bold]User models:[/]\n")
+        print("[bold]User-defined models:[/]\n")
         print(format_user_models(user_models.models))
+        print()
 
     if strike is None:
         agent_config = AgentConfig.read(directory)
         ensure_profile(agent_config)
+        strike = agent_config.strike
 
-    strike = strike or agent_config.strike
     if strike is None:
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
 
     strike_response = api.create_client().get_strike(strike)
     if user_models.models:
-        print("\n[bold]Strike models:[/]\n")
+        print("\n[bold]Dreadnode-provided models:[/]\n")
     print(format_strike_models(strike_response.models))
 
 
@@ -522,7 +541,7 @@ def links(
     print(table)
 
 
-@cli.command(help="Switch to a different agent link")
+@cli.command(help="Switch to a different agent link", no_args_is_help=True)
 @pretty_cli
 def switch(
     agent_or_profile: t.Annotated[str, typer.Argument(help="Agent key/id or profile name")],
@@ -544,7 +563,7 @@ def switch(
     print(f":exclamation: '{agent_or_profile}' not found, use [bold]dreadnode agent links[/]")
 
 
-@cli.command(help="Clone a github repository")
+@cli.command(help="Clone a github repository", no_args_is_help=True)
 @pretty_cli
 def clone(
     repo: t.Annotated[str, typer.Argument(help="Repository name or URL")],

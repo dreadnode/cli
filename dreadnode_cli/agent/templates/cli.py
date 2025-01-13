@@ -9,13 +9,14 @@ from dreadnode_cli import api
 from dreadnode_cli.agent.templates.format import format_templates
 from dreadnode_cli.agent.templates.manager import TemplateManager
 from dreadnode_cli.defaults import TEMPLATES_DEFAULT_REPO
+from dreadnode_cli.ext.typer import AliasGroup
 from dreadnode_cli.types import GithubRepo
 from dreadnode_cli.utils import download_and_unzip_archive, get_repo_archive_source_path, pretty_cli
 
-cli = typer.Typer(no_args_is_help=True)
+cli = typer.Typer(no_args_is_help=True, cls=AliasGroup)
 
 
-@cli.command(help="List available agent templates with their descriptions")
+@cli.command("show|list", help="List available agent templates with their descriptions")
 @pretty_cli
 def show() -> None:
     template_manager = TemplateManager()
