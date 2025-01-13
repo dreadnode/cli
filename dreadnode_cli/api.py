@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from rich import print
 
 from dreadnode_cli import __version__, utils
-from dreadnode_cli.config import UserConfig, UserModel
+from dreadnode_cli.config import UserConfig
 from dreadnode_cli.defaults import (
     DEBUG,
     DEFAULT_MAX_POLL_TIME,
@@ -376,6 +376,11 @@ class Client:
 
     class StrikeRunResponse(_StrikeRun):
         zones: list["Client.StrikeRunZone"]
+
+    class UserModel(BaseModel):
+        key: str
+        generator_id: str
+        api_key: str
 
     def get_strike(self, strike: str) -> StrikeResponse:
         response = self.request("GET", f"/api/strikes/{strike}")

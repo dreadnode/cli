@@ -9,7 +9,6 @@ from rich.table import Table
 from rich.text import Text
 
 from dreadnode_cli import api
-from dreadnode_cli.config import UserModel
 
 P = t.ParamSpec("P")
 
@@ -64,25 +63,6 @@ def format_duration(start: datetime | None, end: datetime | None) -> str:
 
 def format_time(dt: datetime | None) -> str:
     return dt.astimezone().strftime("%c") if dt else "-"
-
-
-def format_user_models(models: list[UserModel]) -> RenderableType:
-    table = Table(box=box.ROUNDED)
-    table.add_column("key")
-    table.add_column("name")
-    table.add_column("provider")
-    table.add_column("api_key")
-
-    for model in models:
-        provider_style = get_model_provider_style(model.provider)
-        table.add_row(
-            Text(model.key),
-            Text(model.name, style=f"bold {provider_style}"),
-            Text(model.provider, style=provider_style),
-            Text("yes" if model.api_key else "no", style="green" if model.api_key else "dim"),
-        )
-
-    return table
 
 
 def format_strike_models(models: list[api.Client.StrikeModel]) -> RenderableType:
