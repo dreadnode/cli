@@ -20,8 +20,7 @@ class UserModel(BaseModel):
         """Print a warning if an API key is included in the generator ID."""
 
         if ",api_key=" in value:
-            print()
-            print(f":warning: API keys should not be included in generator ids: [bold]{value}[/]")
+            print(f":heavy_exclamation_mark: API keys should not be included in generator ids: [bold]{value}[/]")
             print()
 
         return value
