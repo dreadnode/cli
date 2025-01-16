@@ -24,9 +24,9 @@ from dreadnode_cli.agent.format import (
 )
 from dreadnode_cli.agent.templates import cli as templates_cli
 from dreadnode_cli.agent.templates.format import format_templates
-from dreadnode_cli.agent.templates.manager import TemplateManager
 from dreadnode_cli.api import Client
 from dreadnode_cli.config import UserConfig
+from dreadnode_cli.dreadnode import Dreadnode
 from dreadnode_cli.model.config import UserModels
 from dreadnode_cli.model.format import format_user_models
 from dreadnode_cli.profile.cli import switch as switch_profile
@@ -104,121 +104,82 @@ def init(
         ),
     ] = None,
 ) -> None:
-    try:
-        AgentConfig.read(directory)
+    dreadnode = Dreadnode(verbose=True)
+
+    if dreadnode.is_agent_path(directory):
         if Prompt.ask(":axe: Agent config exists, overwrite?", choices=["y", "n"], default="n") == "n":
             return
         print()
-    except Exception:
-        pass
 
-    print(f":coffee: Fetching strike '{strike}' ...")
+    project_name = name
+    if project_name is None:
+        project_name = Prompt.ask(":toolbox: Project name?", default=directory.name)
+        print()
 
-    client = api.create_client()
+    project_strike = dreadnode.get_strike_by_name(strike)
 
-    try:
-        strike_response = client.get_strike(strike)
-    except Exception as e:
-        raise Exception(f"Failed to find strike '{strike}': {e}") from e
-
-    print(f":crossed_swords: Linking to strike '{strike_response.name}' ({strike_response.type})")
-    print()
-
-    project_name = Prompt.ask(":toolbox: Project name?", default=name or directory.name)
-    print()
-
-    directory.mkdir(exist_ok=True)
-
-    template_manager = TemplateManager()
-    context = {"project_name": project_name, "strike": strike_response}
+    cleanup_path: pathlib.Path | None = None
 
     if source is None:
         # get the templates that match the strike
-        available_templates = template_manager.get_templates_for_strike(strike_response.name, strike_response.type)
-        available: list[str] = list(available_templates.keys())
-
-        # none available
-        if not available:
-            if not template_manager.templates:
-                raise Exception(
-                    "No templates installed, use [bold]dreadnode agent templates install[/] to install some."
-                )
-            else:
-                raise Exception("No templates found for the given strike.")
-
+        available_templates = dreadnode.get_agent_templates_for_strike(project_strike)
+        available_templates_names = available_templates.keys()
         # ask the user if the template has not been passed via command line
         if template is None:
             print(":notebook: Compatible templates:\n")
             print(format_templates(available_templates, with_index=True))
             print()
 
-            choice = Prompt.ask("Choice ", choices=[str(i + 1) for i in range(len(available))])
-            template = available[int(choice) - 1]
-
+            choice = Prompt.ask("Choice ", choices=[str(i + 1) for i in range(len(available_templates_names))])
+            template = available_templates_names[int(choice) - 1]
         # validate the template
-        if template not in available:
+        if template not in available_templates_names:
             raise Exception(
                 f"Template '{template}' not found, use [bold]dreadnode agent templates show[/] to see available templates."
             )
-
-        # install the template
-        template_manager.install(template, directory, context)
     else:
         source_dir = pathlib.Path(source)
-        cleanup = False
-
         if not source_dir.exists():
             # source is not a local folder, so it can be:
             # - full ZIP archive URL
             # - github compatible reference
-
             try:
                 github_repo = GithubRepo(source)
-
                 # Check if the repo is accessible
                 if github_repo.exists:
                     source_dir = download_and_unzip_archive(github_repo.zip_url)
-
                 # This could be a private repo that the user can access
                 # by getting an access token from our API
                 elif github_repo.namespace == "dreadnode":
-                    github_access_token = client.get_github_access_token([github_repo.repo])
+                    github_access_token = api.create_client().get_github_access_token([github_repo.repo])
                     print(":key: Accessed private repository")
                     source_dir = download_and_unzip_archive(
                         github_repo.api_zip_url, headers={"Authorization": f"Bearer {github_access_token.token}"}
                     )
-
                 else:
                     raise Exception(f"Repository '{github_repo}' not found or inaccessible")
-
                 # github repos zip archives usually contain a single branch folder, the real source dir,
                 # and the path is not known beforehand
                 source_dir = get_repo_archive_source_path(source_dir)
-
             except ValueError:
                 # not a repo, download and unzip as a ZIP archive URL
                 source_dir = download_and_unzip_archive(source)
-
             # make sure the temporary directory is cleaned up
-            cleanup = True
-
-        try:
+            cleanup_path = source_dir
             # add subpath if specified
             if path is not None:
                 source_dir = source_dir / path
+            template = str(source_dir)
 
-            # install the template
-            template_manager.install_from_dir(source_dir, directory, context)
-        except Exception:
-            if cleanup and source_dir.exists():
-                shutil.rmtree(source_dir)
-            raise
+    try:
+        dreadnode.create_agent(project_name, project_strike, template, directory)
 
-    # Wait to write this until after the template is installed
-    AgentConfig(project_name=project_name, strike=strike).write(directory=directory)
+        print()
+        print(f"Initialized [b]{directory}[/]")
 
-    print()
-    print(f"Initialized [b]{directory}[/]")
+    finally:
+        if cleanup_path and cleanup_path.exists():
+            shutil.rmtree(cleanup_path)
 
 
 @cli.command(help="Push a new version of the active agent")

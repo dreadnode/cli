@@ -4,9 +4,7 @@ import typer
 from rich import box, print
 from rich.table import Table
 
-from dreadnode_cli import utils
-from dreadnode_cli.api import Token
-from dreadnode_cli.config import UserConfig
+from dreadnode_cli.dreadnode import Dreadnode, api, utils
 from dreadnode_cli.ext.typer import AliasGroup
 from dreadnode_cli.utils import pretty_cli
 
@@ -16,8 +14,8 @@ cli = typer.Typer(no_args_is_help=True, cls=AliasGroup)
 @cli.command("show|list", help="List all server profiles")
 @pretty_cli
 def show() -> None:
-    config = UserConfig.read()
-    if not config.servers:
+    dreadnode = Dreadnode()
+    if not dreadnode.config.servers:
         print(":exclamation: No server profiles are configured")
         return
 
@@ -28,9 +26,9 @@ def show() -> None:
     table.add_column("Username")
     table.add_column("Valid Until")
 
-    for profile, server in config.servers.items():
-        active = profile == config.active
-        refresh_token = Token(server.refresh_token)
+    for profile, server in dreadnode.config.servers.items():
+        active = profile == dreadnode.config.active
+        refresh_token = api.Token(server.refresh_token)
 
         table.add_row(
             profile + ("*" if active else ""),
@@ -49,30 +47,28 @@ def show() -> None:
 @cli.command(help="Set the active server profile", no_args_is_help=True)
 @pretty_cli
 def switch(profile: t.Annotated[str, typer.Argument(help="Profile to switch to")]) -> None:
-    config = UserConfig.read()
-    if profile not in config.servers:
+    dreadnode = Dreadnode()
+    if not dreadnode.profile_exists(profile):
         print(f":exclamation: Profile [bold]{profile}[/] does not exist")
         return
 
-    config.active = profile
-    config.write()
+    dreadnode.set_active_profile(profile)
 
     print(f":laptop_computer: Switched to [bold magenta]{profile}[/]")
-    print(f"|- email:    [bold]{config.servers[profile].email}[/]")
-    print(f"|- username: {config.servers[profile].username}")
-    print(f"|- url:      {config.servers[profile].url}")
+    print(f"|- email:    [bold]{dreadnode.config.servers[profile].email}[/]")
+    print(f"|- username: {dreadnode.config.servers[profile].username}")
+    print(f"|- url:      {dreadnode.config.servers[profile].url}")
     print()
 
 
 @cli.command(help="Remove a server profile", no_args_is_help=True)
 @pretty_cli
 def forget(profile: t.Annotated[str, typer.Argument(help="Profile of the server to remove")]) -> None:
-    config = UserConfig.read()
-    if profile not in config.servers:
+    dreadnode = Dreadnode()
+    if not dreadnode.profile_exists(profile):
         print(f":exclamation: Profile [bold]{profile}[/] does not exist")
         return
 
-    del config.servers[profile]
-    config.write()
+    dreadnode.forget_profile(profile)
 
     print(f":axe: Forgot about [bold]{profile}[/]")

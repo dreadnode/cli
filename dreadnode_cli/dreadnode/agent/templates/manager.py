@@ -10,7 +10,7 @@ from pydantic_yaml import parse_yaml_raw_as
 from rich import print
 from rich.prompt import Prompt
 
-from dreadnode_cli.defaults import TEMPLATE_MANIFEST_FILE, TEMPLATES_PATH
+from dreadnode_cli.dreadnode.defaults import TEMPLATE_MANIFEST_FILE, TEMPLATES_PATH
 
 
 class Manifest(BaseModel):

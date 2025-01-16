@@ -8,8 +8,8 @@ from rich import print
 from rich.live import Live
 from rich.text import Text
 
-from dreadnode_cli.config import ServerConfig
-from dreadnode_cli.defaults import (
+from dreadnode_cli.dreadnode.config import ServerConfig
+from dreadnode_cli.dreadnode.defaults import (
     DOCKER_REGISTRY_IMAGE_TAG,
     DOCKER_REGISTRY_LOCAL_PORT,
     DOCKER_REGISTRY_SUBDOMAIN,

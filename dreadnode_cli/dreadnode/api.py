@@ -10,9 +10,9 @@ import httpx
 from pydantic import BaseModel
 from rich import print
 
-from dreadnode_cli import __version__, utils
-from dreadnode_cli.config import UserConfig
-from dreadnode_cli.defaults import (
+from dreadnode_cli.dreadnode import __version__, utils
+from dreadnode_cli.dreadnode.config import UserConfig
+from dreadnode_cli.dreadnode.defaults import (
     DEBUG,
     DEFAULT_MAX_POLL_TIME,
     DEFAULT_POLL_INTERVAL,

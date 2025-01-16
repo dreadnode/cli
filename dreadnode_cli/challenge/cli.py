@@ -6,7 +6,7 @@ import typer
 from rich import box, print
 from rich.table import Table
 
-import dreadnode_cli.api as api
+from dreadnode_cli.dreadnode import api
 from dreadnode_cli.utils import pretty_cli
 
 cli = typer.Typer(no_args_is_help=True)
