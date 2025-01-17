@@ -26,7 +26,7 @@ from dreadnode_cli.agent.templates import cli as templates_cli
 from dreadnode_cli.agent.templates.format import format_templates
 from dreadnode_cli.api import Client
 from dreadnode_cli.config import UserConfig
-from dreadnode_cli.dreadnode import Dreadnode
+from dreadnode_cli.dreadnode import Agent, Dreadnode
 from dreadnode_cli.model.config import UserModels
 from dreadnode_cli.model.format import format_user_models
 from dreadnode_cli.profile.cli import switch as switch_profile
@@ -104,9 +104,7 @@ def init(
         ),
     ] = None,
 ) -> None:
-    dreadnode = Dreadnode(verbose=True)
-
-    if dreadnode.is_agent_path(directory):
+    if Agent.is_agent_path(directory):
         if Prompt.ask(":axe: Agent config exists, overwrite?", choices=["y", "n"], default="n") == "n":
             return
         print()
@@ -116,6 +114,7 @@ def init(
         project_name = Prompt.ask(":toolbox: Project name?", default=directory.name)
         print()
 
+    dreadnode = Dreadnode(verbose=True)
     project_strike = dreadnode.get_strike_by_name(strike)
 
     cleanup_path: pathlib.Path | None = None
@@ -172,7 +171,7 @@ def init(
             template = str(source_dir)
 
     try:
-        dreadnode.create_agent(project_name, project_strike, template, directory)
+        Agent.create(project_name, project_strike, template, directory)
 
         print()
         print(f"Initialized [b]{directory}[/]")
@@ -198,19 +197,27 @@ def push(
     notes: t.Annotated[str | None, typer.Option("--message", "-m", help="Notes for the new version")] = None,
     rebuild: t.Annotated[bool, typer.Option("--rebuild", "-r", help="Force rebuild the agent image")] = False,
 ) -> None:
+    agent = Agent(directory)
+    dreadnode = Dreadnode(verbose=True)
     env = {env_var.split("=")[0]: env_var.split("=")[1] for env_var in env_vars or []}
 
-    agent_config = AgentConfig.read(directory)
-    user_config = UserConfig.read()
-
-    if not user_config.active_profile_name:
+    if not dreadnode.config.active_profile_name:
         raise Exception("No server profile is set, use [bold]dreadnode login[/] to authenticate")
 
-    if agent_config.links and not agent_config.has_link_to_profile(user_config.active_profile_name):
-        print(f":link: Linking as a fresh agent to the current profile [magenta]{user_config.active_profile_name}[/]")
+    if agent.needs_linking(directory):
+        print(
+            f":link: Linking as a fresh agent to the current profile [magenta]{dreadnode.config.active_profile_name}[/]"
+        )
         new = True
 
-    server_config = user_config.get_server_config()
+    if new or agent.needs_naming(directory):
+        print()
+        print(":robot: Creating a new agent ...")
+        name = Prompt.ask("Agent name?", default=agent.config.project_name)
+
+    notes = notes or Prompt.ask("Notes?")
+
+    server_config = dreadnode.config.get_server_config()
 
     registry = get_registry(server_config)
 

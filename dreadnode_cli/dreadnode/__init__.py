@@ -2,7 +2,9 @@ import pathlib
 import webbrowser
 
 from dreadnode_cli.dreadnode import api, defaults
+from dreadnode_cli.dreadnode.agent import docker
 from dreadnode_cli.dreadnode.agent.config import AgentConfig
+from dreadnode_cli.dreadnode.agent.docker import get_registry
 from dreadnode_cli.dreadnode.agent.templates.manager import Template, TemplateManager
 from dreadnode_cli.dreadnode.config import ServerConfig, UserConfig, UserModel, UserModels
 
@@ -172,30 +174,114 @@ class Dreadnode:
                 raise Exception("No templates found for the given strike.")
         return available
 
-    def is_agent_path(self, path: pathlib.Path) -> bool:
+    def push_agent(
+        self,
+        agent: "Agent",
+        tag: str | None = None,
+        notes: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        create_new: bool = False,
+        rebuild: bool = False,
+    ) -> None:
+        server_config = self.config.get_server_config()
+        registry = get_registry(server_config)
+
+        self._print(f":key: Authenticating with [bold]{registry}[/] ...")
+        docker.login(registry, server_config.username, server_config.api_key)
+
+        self._print(f"\n:wrench: Building agent from [b]{agent.path}[/] ...")
+        image = docker.build(agent.path, force_rebuild=rebuild)
+        agent_name = docker.sanitized_name(agent.config.project_name)
+        sanitized_user_name = docker.sanitized_name(server_config.username)
+
+        if not agent_name:
+            raise Exception("Failed to sanitize agent name, please use a different name")
+
+        elif agent_name != agent.config.project_name:
+            self._print(f":four_leaf_clover: Agent name normalized to [bold magenta]{agent_name}[/]")
+
+        if not sanitized_user_name:
+            raise Exception("Failed to sanitize username")
+
+        elif sanitized_user_name != server_config.username:
+            self._print(f":four_leaf_clover: Username normalized to [bold magenta]{sanitized_user_name}[/]")
+
+        repository = f"{registry}/{sanitized_user_name}/agents/{agent_name}"
+        tag = tag or image.id[-8:]
+
+        self._print(f"\n:package: Pushing agent to [b]{repository}:{tag}[/] ...")
+        docker.push(image, repository, tag)
+
+        client = api.create_client()
+        container = api.Client.Container(image=f"{repository}:{tag}", env=env_vars, name=None)
+
+        if create_new or agent.needs_naming():
+            agent = client.create_strike_agent(container, name, strike=agent_config.strike, notes=notes)
+            agent_config.add_link(agent.key, agent.id, user_config.active_profile_name).write(directory)
+        else:
+            active_agent_id = agent_config.active
+            if active_agent_id is None:
+                raise Exception("No active agent link found. Use 'switch' command to set an active link.")
+
+            print()
+            print(":robot: Creating a new version ...")
+            notes = notes or Prompt.ask("Notes?")
+
+            try:
+                agent = client.create_strike_agent_version(str(active_agent_id), container, notes)
+            except Exception as e:
+                # 404 is expected if the agent was created on a different server profile
+                if str(e).startswith("404"):
+                    raise Exception(
+                        f"Agent '{active_agent_id}' not found for the current server profile, create the agent again."
+                    ) from e
+                else:
+                    raise e
+
+
+class Agent:
+    def __init__(self, path: pathlib.Path = pathlib.Path(".")):
+        self.path = path
+        self.config = AgentConfig.read(path)
+
+    def needs_naming(self) -> bool:
+        return not self.config.project_name
+
+    def needs_linking(self, profile: str | None = None) -> bool:
+        return self.config.links and not self.config.has_link_to_profile(profile or self.config.active_profile_name)
+
+    def link_to(self, key: str, id: str, profile: str) -> None:
+        self.config.add_link(key, id, profile).write(self.path)
+
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        strike: api.StrikeResponse,
+        template: str,
+        directory: pathlib.Path = pathlib.Path("."),
+    ) -> "Agent":
+        """
+        Create an agent.
+        """
+        directory.mkdir(exist_ok=True)
+        context = {"project_name": name, "strike": strike}
+        template_manager = TemplateManager()
+        if template in template_manager.templates:
+            template_manager.install(template, directory, context)
+        else:
+            template_manager.install_from_dir(pathlib.Path(template), directory, context)
+
+        # Wait to write this until after the template is installed
+        AgentConfig(project_name=name, strike=strike).write(directory=directory)
+
+        return cls(directory)
+
+    @staticmethod
+    def is_agent_path(path: pathlib.Path) -> bool:
         """Check if an agent exists in a path."""
         try:
             AgentConfig.read(path)
             return True
         except Exception:
             return False
-
-    def create_agent(
-        self,
-        name: str,
-        strike: api.StrikeResponse,
-        template: str,
-        directory: pathlib.Path = pathlib.Path("."),
-    ) -> None:
-        """
-        Create an agent.
-        """
-        directory.mkdir(exist_ok=True)
-        context = {"project_name": name, "strike": strike}
-        if template in self.template_manager.templates:
-            self.template_manager.install(template, directory, context)
-        else:
-            self.template_manager.install_from_dir(pathlib.Path(template), directory, context)
-
-        # Wait to write this until after the template is installed
-        AgentConfig(project_name=name, strike=strike).write(directory=directory)
