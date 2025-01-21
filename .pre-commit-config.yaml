@@ -12,3 +12,15 @@ repos:
     hooks:
       - id: actionlint
         name: Check Github Actions
+
+  - repo: local
+    hooks:
+
+      # Generate CLI docs
+      - id: generate-cli-docs
+        name: Generate CLI Documentation
+        entry: poetry run typer dreadnode_cli/__main__.py utils docs --name dreadnode --output CLI.md --title "CLI Commands"
+        language: system
+        pass_filenames: false
+        files: ^dreadnode_cli/.*\.py$
+        always_run: true

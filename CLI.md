@@ -1,4 +1,4 @@
-# `dreadnode`
+# CLI Commands
 
 Interact with the Dreadnode platform
 
@@ -10,8 +10,6 @@ $ dreadnode [OPTIONS] COMMAND [ARGS]...
 
 **Options**:
 
-* `--install-completion`: Install completion for the current shell.
-* `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
 * `--help`: Show this message and exit.
 
 **Commands**:
@@ -19,6 +17,7 @@ $ dreadnode [OPTIONS] COMMAND [ARGS]...
 * `agent`: Interact with Strike agents
 * `challenge`: Interact with Crucible challenges
 * `login`: Authenticate to the platform.
+* `model`: Manage user-defined inference models
 * `profile`: Manage server profiles
 * `refresh`: Refresh data for the active server profile.
 * `version`: Show versions and exit.
@@ -50,7 +49,7 @@ $ dreadnode agent [OPTIONS] COMMAND [ARGS]...
 * `show`: Show the status of the active agent
 * `strikes`: List available strikes
 * `switch`: Switch to a different agent link
-* `templates`: Interact with Strike templates
+* `templates`: Manage Agent templates
 * `versions`: List historical versions of the active agent
 
 ### `dreadnode agent clone`
@@ -256,7 +255,7 @@ $ dreadnode agent switch [OPTIONS] AGENT_OR_PROFILE [DIRECTORY]
 
 ### `dreadnode agent templates`
 
-Interact with Strike templates
+Manage Agent templates
 
 **Usage**:
 
@@ -271,7 +270,7 @@ $ dreadnode agent templates [OPTIONS] COMMAND [ARGS]...
 **Commands**:
 
 * `install`: Install a template pack
-* `show`: List available agent templates with their...
+* `show|list`: List available agent templates with their...
 
 #### `dreadnode agent templates install`
 
@@ -291,14 +290,14 @@ $ dreadnode agent templates install [OPTIONS] [SOURCE]
 
 * `--help`: Show this message and exit.
 
-#### `dreadnode agent templates show`
+#### `dreadnode agent templates show|list`
 
 List available agent templates with their descriptions
 
 **Usage**:
 
 ```console
-$ dreadnode agent templates show [OPTIONS]
+$ dreadnode agent templates show|list [OPTIONS]
 ```
 
 **Options**:
@@ -414,6 +413,80 @@ $ dreadnode login [OPTIONS]
 * `-p, --profile TEXT`: Profile alias to assign / update
 * `--help`: Show this message and exit.
 
+## `dreadnode model`
+
+Manage user-defined inference models
+
+**Usage**:
+
+```console
+$ dreadnode model [OPTIONS] COMMAND [ARGS]...
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+**Commands**:
+
+* `add`: Add a new inference model
+* `forget`: Remove an user inference model
+* `show|list`: List all configured models
+
+### `dreadnode model add`
+
+Add a new inference model
+
+**Usage**:
+
+```console
+$ dreadnode model add [OPTIONS]
+```
+
+**Options**:
+
+* `--id TEXT`: Identifier for referencing this model  [required]
+* `-g, --generator-id TEXT`: Rigging (LiteLLM) generator id  [required]
+* `-k, --api-key TEXT`: API key for the inference provider (supports $ENV_VAR syntax)  [required]
+* `-n, --name TEXT`: Friendly name
+* `-p, --provider TEXT`: Provider name
+* `-u, --update`: Update an existing model if it exists
+* `--help`: Show this message and exit.
+
+If $ENV_VAR syntax is used for the api key, it will be replaced with the environment value when used.
+
+### `dreadnode model forget`
+
+Remove an user inference model
+
+**Usage**:
+
+```console
+$ dreadnode model forget [OPTIONS] ID
+```
+
+**Arguments**:
+
+* `ID`: Model to remove  [required]
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `dreadnode model show|list`
+
+List all configured models
+
+**Usage**:
+
+```console
+$ dreadnode model show|list [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
 ## `dreadnode profile`
 
 Manage server profiles
@@ -431,7 +504,7 @@ $ dreadnode profile [OPTIONS] COMMAND [ARGS]...
 **Commands**:
 
 * `forget`: Remove a server profile
-* `list`: List all server profiles
+* `show|list`: List all server profiles
 * `switch`: Set the active server profile
 
 ### `dreadnode profile forget`
@@ -452,14 +525,14 @@ $ dreadnode profile forget [OPTIONS] PROFILE
 
 * `--help`: Show this message and exit.
 
-### `dreadnode profile list`
+### `dreadnode profile show|list`
 
 List all server profiles
 
 **Usage**:
 
 ```console
-$ dreadnode profile list [OPTIONS]
+$ dreadnode profile show|list [OPTIONS]
 ```
 
 **Options**:
