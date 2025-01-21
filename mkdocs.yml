@@ -8,5 +8,5 @@ repo_name: dreadnode/cli
 docs_dir: .
 
 nav:
-  - cli/README.md
-  - Commands: cli/CLI.md
+  - README.md
+  - Commands: CLI.md
