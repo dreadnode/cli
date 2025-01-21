@@ -1,0 +1,12 @@
+site_name: Dreadnode CLI
+site_description: Dreadnode CLI docs
+site_author: Dreadnode
+site_url: https://docs.dreadnode.io/cli
+repo_url: https://github.com/dreadnode/cli
+repo_name: dreadnode/cli
+
+docs_dir: .
+
+nav:
+  - cli/README.md
+  - Commands: cli/CLI.md
