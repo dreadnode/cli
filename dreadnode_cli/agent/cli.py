@@ -334,6 +334,9 @@ def deploy(
     agent_config = AgentConfig.read(directory)
     ensure_profile(agent_config)
 
+    user_config = UserConfig.read()
+    server_config = user_config.get_server_config()
+
     active_link = agent_config.active_link
 
     client = api.create_client()
@@ -375,7 +378,7 @@ def deploy(
 
     run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model, user_model=user_model)
     agent_config.add_run(run.id).write(directory)
-    formatted = format_run(run)
+    formatted = format_run(run, server_url=server_config.url)
 
     if not watch:
         print(formatted)
@@ -385,7 +388,7 @@ def deploy(
         while run.is_running():
             time.sleep(1)
             run = client.get_strike_run(run.id)
-            live.update(format_run(run))
+            live.update(format_run(run, server_url=server_config.url))
 
 
 @cli.command(help="List available models for the current (or specified) strike")
@@ -440,6 +443,9 @@ def latest(
     agent_config = AgentConfig.read(directory)
     ensure_profile(agent_config)
 
+    user_config = UserConfig.read()
+    server_config = user_config.get_server_config()
+
     active_link = agent_config.active_link
     if not active_link.runs:
         print(":exclamation: No runs yet, use [bold]dreadnode agent deploy[/]")
@@ -451,7 +457,7 @@ def latest(
     if raw:
         print(run.model_dump(mode="json"))
     else:
-        print(format_run(run, verbose=verbose, include_logs=logs))
+        print(format_run(run, verbose=verbose, include_logs=logs, server_url=server_config.url))
 
 
 @cli.command(help="Show the status of the active agent")

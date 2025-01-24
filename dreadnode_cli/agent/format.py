@@ -259,7 +259,9 @@ def format_zones_verbose(zones: list[api.Client.StrikeRunZone], *, include_logs:
     return Group(*components)
 
 
-def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, include_logs: bool = False) -> Panel:
+def format_run(
+    run: api.Client.StrikeRunResponse, *, verbose: bool = False, include_logs: bool = False, server_url: str = ""
+) -> Panel:
     # Main run information
     table = Table(show_header=False, box=box.SIMPLE)
     table.add_column("Property", style="dim")
@@ -278,6 +280,10 @@ def format_run(run: api.Client.StrikeRunResponse, *, verbose: bool = False, incl
     table.add_row("model", run.model.replace(USER_MODEL_PREFIX, "") if run.model else "<default>")
     table.add_row("agent", f"{agent_name} ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
+    if server_url != "":
+        table.add_row(
+            "run url", Text(f"{server_url.rstrip('/')}/strikes/agents/{run.agent_key}/runs/{run.id}", style="cyan")
+        )
     table.add_row("notes", run.agent_version.notes or "-")
 
     table.add_row("", "")
