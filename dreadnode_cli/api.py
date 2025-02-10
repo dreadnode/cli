@@ -293,6 +293,16 @@ class Client:
         env: dict[str, str]
         name: str | None
 
+    class StrikeMetricPoint(BaseModel):
+        timestamp: datetime
+        value: float
+        metadata: dict[str, t.Any]
+
+    class StrikeMetric(BaseModel):
+        type: str
+        description: str | None
+        points: "list[Client.StrikeMetricPoint]"
+
     class StrikeAgentVersion(BaseModel):
         id: UUID
         created_at: datetime
@@ -350,9 +360,11 @@ class Client:
         container_logs: dict[str, str]
         outputs: list["Client.StrikeRunOutput"]
         inferences: list[dict[str, t.Any]]
+        metrics: dict[str, "Client.StrikeMetric"]
 
     class _StrikeRun(BaseModel):
         id: UUID
+        key: str
         strike_id: UUID
         strike_key: str
         strike_name: str
@@ -367,6 +379,9 @@ class Client:
         status: "Client.StrikeRunStatus"
         start: datetime | None
         end: datetime | None
+        group_id: UUID | None
+        group_key: str | None
+        group_name: str | None
 
         def is_running(self) -> bool:
             return self.status in ["pending", "deploying", "running"]
@@ -381,6 +396,15 @@ class Client:
         key: str
         generator_id: str
         api_key: str
+
+    class StrikeRunGroupResponse(BaseModel):
+        id: UUID
+        key: str
+        name: str
+        description: str | None
+        created_at: datetime
+        updated_at: datetime
+        run_count: int
 
     def get_strike(self, strike: str) -> StrikeResponse:
         response = self.request("GET", f"/api/strikes/{strike}")
@@ -441,6 +465,7 @@ class Client:
         model: str | None = None,
         user_model: UserModel | None = None,
         strike: UUID | str | None = None,
+        group: UUID | str | None = None,
     ) -> StrikeRunResponse:
         response = self.request(
             "POST",
@@ -450,6 +475,7 @@ class Client:
                 "model": model,
                 "user_model": user_model.model_dump(mode="json") if user_model else None,
                 "strike": str(strike) if strike else None,
+                "group": str(group) if group else None,
             },
         )
         return self.StrikeRunResponse(**response.json())
@@ -463,6 +489,10 @@ class Client:
             "GET", "/api/strikes/runs", query_params={"strike_id": str(strike_id)} if strike_id else None
         )
         return [self.StrikeRunSummaryResponse(**run) for run in response.json()]
+
+    def list_strike_run_groups(self) -> list[StrikeRunGroupResponse]:
+        response = self.request("GET", "/api/strikes/groups")
+        return [self.StrikeRunGroupResponse(**group) for group in response.json()]
 
 
 def create_client(*, profile: str | None = None) -> Client:

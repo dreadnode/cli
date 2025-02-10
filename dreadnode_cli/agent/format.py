@@ -267,9 +267,17 @@ def format_run(
     table.add_column("Property", style="dim")
     table.add_column("Value")
 
+    table.add_row("key", run.key)
     table.add_row("status", Text(run.status, style=get_status_style(run.status)))
     table.add_row("strike", f"[magenta]{run.strike_name}[/] ([dim]{run.strike_key}[/])")
     table.add_row("type", run.strike_type)
+    table.add_row("group", Text(run.group_key or "-", style="blue" if run.group_key else ""))
+
+    if server_url != "":
+        table.add_row("", "")
+        table.add_row(
+            "url", Text(f"{server_url.rstrip('/')}/strikes/agents/{run.agent_key}/runs/{run.id}", style="cyan")
+        )
 
     if run.agent_name:
         agent_name = f"[bold magenta]{run.agent_name}[/] [[dim]{run.agent_key}[/]]"
@@ -280,10 +288,6 @@ def format_run(
     table.add_row("model", run.model.replace(USER_MODEL_PREFIX, "") if run.model else "<default>")
     table.add_row("agent", f"{agent_name} ([dim]rev[/] [yellow]{run.agent_revision}[/])")
     table.add_row("image", Text(run.agent_version.container.image, style="cyan"))
-    if server_url != "":
-        table.add_row(
-            "run url", Text(f"{server_url.rstrip('/')}/strikes/agents/{run.agent_key}/runs/{run.id}", style="cyan")
-        )
     table.add_row("notes", run.agent_version.notes or "-")
 
     table.add_row("", "")
@@ -301,21 +305,41 @@ def format_run(
 
 def format_runs(runs: list[api.Client.StrikeRunSummaryResponse]) -> RenderableType:
     table = Table(box=box.ROUNDED)
-    table.add_column("id", style="dim")
+    table.add_column("key", style="dim")
     table.add_column("agent")
     table.add_column("status")
     table.add_column("model")
+    table.add_column("group")
     table.add_column("started")
     table.add_column("duration")
 
     for run in runs:
         table.add_row(
-            str(run.id),
+            run.key,
             f"[bold magenta]{run.agent_key}[/] [dim]:[/] [yellow]{run.agent_revision}[/]",
             Text(run.status, style="bold " + get_status_style(run.status)),
             Text(run.model.replace(USER_MODEL_PREFIX, "") if run.model else "-"),
+            Text(run.group_key or "-", style="blue" if run.group_key else "dim"),
             format_time(run.start),
             Text(format_duration(run.start, run.end), style="bold cyan"),
+        )
+
+    return table
+
+
+def format_run_groups(groups: list[api.Client.StrikeRunGroupResponse]) -> RenderableType:
+    table = Table(box=box.ROUNDED)
+    table.add_column("Name", style="bold cyan")
+    table.add_column("description")
+    table.add_column("runs", style="yellow")
+    table.add_column("created", style="dim")
+
+    for group in groups:
+        table.add_row(
+            group.key,
+            group.description or "-",
+            str(group.run_count),
+            group.created_at.astimezone().strftime("%c"),
         )
 
     return table
