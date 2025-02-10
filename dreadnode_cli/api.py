@@ -369,7 +369,7 @@ class Client:
         agent_name: str | None = None
         agent_revision: int
         agent_version: "Client.StrikeAgentVersion"
-        context: "Client.StrikeRunContext" | None = None
+        context: "Client.StrikeRunContext | None" = None
         status: "Client.StrikeRunStatus"
         start: datetime | None
         end: datetime | None
