@@ -294,11 +294,15 @@ def format_run(
     if run.context and (run.context.environment or run.context.parameters or run.context.command):
         table.add_row("", "")
         if run.context.environment:
-            table.add_row("environment", Pretty(run.context.environment))
+            table.add_row(
+                "environment", " ".join(f"[magenta]{k}[/]=[yellow]{v}[/]" for k, v in run.context.environment.items())
+            )
         if run.context.parameters:
-            table.add_row("parameters", Pretty(run.context.parameters))
+            table.add_row(
+                "parameters", " ".join(f"[magenta]{k}[/]=[yellow]{v}[/]" for k, v in run.context.parameters.items())
+            )
         if run.context.command:
-            table.add_row("command", run.context.command)
+            table.add_row("command", f"[bold][red]{run.context.command}[/red][/bold]")
 
     components: list[RenderableType] = [
         table,
