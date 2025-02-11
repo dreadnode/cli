@@ -19,6 +19,7 @@ from dreadnode_cli.agent.format import (
     format_agent,
     format_agent_versions,
     format_run,
+    format_run_groups,
     format_runs,
     format_strike_models,
     format_strikes,
@@ -68,7 +69,9 @@ def ensure_profile(agent_config: AgentConfig, *, user_config: UserConfig | None 
         ):
             print()
             raise Exception(
-                "Agent link does not match the current server profile. Use [bold]dreadnode agent switch[/] or [bold]dreadnode profile switch[/]."
+                f"Current agent link ([yellow]{agent_config.active_link.profile}[/]) does not match "
+                f"the current server profile ([magenta]{user_config.active_profile_name}[/]). "
+                "Use [bold]dreadnode agent switch[/] or [bold]dreadnode profile switch[/]."
             )
 
         switch_profile(agent_config.active_link.profile)
@@ -248,7 +251,14 @@ def push(
 
     if agent_config.links and not agent_config.has_link_to_profile(user_config.active_profile_name):
         print(f":link: Linking as a fresh agent to the current profile [magenta]{user_config.active_profile_name}[/]")
+        print()
         new = True
+    elif agent_config.active and agent_config.active_link.profile != user_config.active_profile_name:
+        raise Exception(
+            f"Current agent link ([yellow]{agent_config.active_link.profile}[/]) does not match "
+            f"the current server profile ([magenta]{user_config.active_profile_name}[/]). "
+            "Use [bold]dreadnode agent switch[/] or [bold]dreadnode profile switch[/]."
+        )
 
     server_config = user_config.get_server_config()
 
@@ -372,6 +382,7 @@ def deploy(
     ] = None,
     strike: t.Annotated[str | None, typer.Option("--strike", "-s", help="The strike to use for this run")] = None,
     watch: t.Annotated[bool, typer.Option("--watch", "-w", help="Watch the run status")] = True,
+    group: t.Annotated[str | None, typer.Option("--group", "-g", help="Group to associate this run with")] = None,
 ) -> None:
     agent_config = AgentConfig.read(directory)
     ensure_profile(agent_config)
@@ -421,7 +432,7 @@ def deploy(
             )
 
     run = client.start_strike_run(
-        agent.latest_version.id, strike=strike, model=model, user_model=user_model, context=context
+        agent.latest_version.id, strike=strike, model=model, user_model=user_model, group=group, context=context
     )
     agent_config.add_run(run.id).write(directory)
     formatted = format_run(run, server_url=server_config.url)
@@ -613,6 +624,14 @@ def switch(
             return
 
     print(f":exclamation: '{agent_or_profile}' not found, use [bold]dreadnode agent links[/]")
+
+
+@cli.command(help="List strike run groups")
+@pretty_cli
+def run_groups() -> None:
+    client = api.create_client()
+    groups = client.list_strike_run_groups()
+    print(format_run_groups(groups))
 
 
 @cli.command(help="Clone a github repository", no_args_is_help=True)

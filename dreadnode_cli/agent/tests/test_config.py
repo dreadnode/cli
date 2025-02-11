@@ -121,7 +121,7 @@ def test_ensure_profile() -> None:
     agent_config.add_link("test-main", UUID("00000000-0000-0000-0000-000000000000"), "main")
     agent_config.active = "test-other"
     with patch("rich.prompt.Prompt.ask", return_value="n"):
-        with pytest.raises(Exception, match="Agent link does not match the current server profile"):
+        with pytest.raises(Exception, match="Current agent link"):
             ensure_profile(agent_config, user_config=user_config)
 
     # We should switch if the user agrees
