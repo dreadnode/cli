@@ -85,6 +85,9 @@ $ dreadnode agent deploy [OPTIONS]
 
 * `-m, --model TEXT`: The inference model to use for this run
 * `-d, --dir DIRECTORY`: The agent directory  [default: .]
+* `-e, --env-var TEXT`: Environment vars to override for this run (key=value)
+* `-p, --param TEXT`: Define custom parameters for this run (key = value in toml syntax or @filename.toml for multiple values)
+* `-c, --command TEXT`: Override the container command for this run.
 * `-s, --strike TEXT`: The strike to use for this run
 * `-w, --watch`: Watch the run status  [default: True]
 * `--help`: Show this message and exit.
