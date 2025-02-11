@@ -291,6 +291,15 @@ def format_run(
     table.add_row("start", format_time(run.start))
     table.add_row("end", format_time(run.end))
 
+    if run.context and (run.context.environment or run.context.parameters or run.context.command):
+        table.add_row("", "")
+        if run.context.environment:
+            table.add_row("environment", Pretty(run.context.environment))
+        if run.context.parameters:
+            table.add_row("parameters", Pretty(run.context.parameters))
+        if run.context.command:
+            table.add_row("command", run.context.command)
+
     components: list[RenderableType] = [
         table,
         format_zones_verbose(run.zones, include_logs=include_logs) if verbose else format_zones_summary(run.zones),
