@@ -4,6 +4,7 @@ import shutil
 import time
 import typing as t
 
+import toml
 import typer
 from rich import box, print
 from rich.live import Live
@@ -318,6 +319,31 @@ def push(
     print(":tada: Agent pushed. use [bold]dreadnode agent deploy[/] to start a new run.")
 
 
+def prepare_run_context(
+    env_vars: list[str] | None, parameters: list[str] | None, command: str | None
+) -> Client.StrikeRunContext | None:
+    if not env_vars and not parameters and not command:
+        return None
+
+    context = Client.StrikeRunContext()
+
+    if env_vars:
+        context.environment = {env_var.split("=")[0]: env_var.split("=")[1] for env_var in env_vars}
+
+    if parameters:
+        context.parameters = {}
+        for param in parameters:
+            if param.startswith("@"):
+                context.parameters.update(toml.load(open(param[1:])))
+            else:
+                context.parameters.update(toml.loads(param))
+
+    if command:
+        context.command = command
+
+    return context
+
+
 @cli.command(help="Start a new run using the latest active agent version")
 @pretty_cli
 def deploy(
@@ -328,6 +354,22 @@ def deploy(
         pathlib.Path,
         typer.Option("--dir", "-d", help="The agent directory", file_okay=False, resolve_path=True),
     ] = pathlib.Path("."),
+    env_vars: t.Annotated[
+        list[str] | None,
+        typer.Option("--env-var", "-e", help="Environment vars to override for this run (key=value)"),
+    ] = None,
+    parameters: t.Annotated[
+        list[str] | None,
+        typer.Option(
+            "--param",
+            "-p",
+            help="Define custom parameters for this run (key = value in toml syntax or @filename.toml for multiple values)",
+        ),
+    ] = None,
+    command: t.Annotated[
+        str | None,
+        typer.Option("--command", "-c", help="Override the container command for this run."),
+    ] = None,
     strike: t.Annotated[str | None, typer.Option("--strike", "-s", help="The strike to use for this run")] = None,
     watch: t.Annotated[bool, typer.Option("--watch", "-w", help="Watch the run status")] = True,
 ) -> None:
@@ -345,6 +387,8 @@ def deploy(
     strike = strike or agent_config.strike
     if strike is None:
         raise Exception("No strike specified, use -s/--strike or set the strike in the agent config")
+
+    context = prepare_run_context(env_vars, parameters, command)
 
     user_models = UserModels.read()
     user_model: Client.UserModel | None = None
@@ -376,7 +420,9 @@ def deploy(
                 f"Model '{model}' is not user-defined nor is it available in strike '{strike_response.name}'"
             )
 
-    run = client.start_strike_run(agent.latest_version.id, strike=strike, model=model, user_model=user_model)
+    run = client.start_strike_run(
+        agent.latest_version.id, strike=strike, model=model, user_model=user_model, context=context
+    )
     agent_config.add_run(run.id).write(directory)
     formatted = format_run(run, server_url=server_config.url)
 

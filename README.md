@@ -165,6 +165,18 @@ dreadnode agent push
 # start a new run using the latest agent version.
 dreadnode agent deploy
 
+# start a new run using the latest agent version with custom environment variables
+dreadnode agent deploy --env-var TEST_ENV=test --env-var ANOTHER_ENV=another_value
+
+# start a new run using the latest agent version with custom parameters (using toml syntax)
+dreadnode agent deploy --param "foo = 'bar'" --param "baz = 123.0"
+
+# start a new run using the latest agent version with custom parameters from a toml file
+dreadnode agent deploy --param @parameters.toml
+
+# start a new run using the latest agent version and override the container command
+dreadnode agent deploy --command "echo 'Hello, world!'"
+
 # show the latest run of the currently active agent
 dreadnode agent latest
 
