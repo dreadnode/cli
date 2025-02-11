@@ -362,6 +362,11 @@ class Client:
         inferences: list[dict[str, t.Any]]
         metrics: dict[str, "Client.StrikeMetric"]
 
+    class StrikeRunContext(BaseModel):
+        environment: dict[str, str] | None = None
+        parameters: dict[str, t.Any] | None = None
+        command: str | None = None
+
     class _StrikeRun(BaseModel):
         id: UUID
         key: str
@@ -376,6 +381,7 @@ class Client:
         agent_name: str | None = None
         agent_revision: int
         agent_version: "Client.StrikeAgentVersion"
+        context: "Client.StrikeRunContext | None" = None
         status: "Client.StrikeRunStatus"
         start: datetime | None
         end: datetime | None
@@ -464,6 +470,7 @@ class Client:
         *,
         model: str | None = None,
         user_model: UserModel | None = None,
+        context: StrikeRunContext | None = None,
         strike: UUID | str | None = None,
         group: UUID | str | None = None,
     ) -> StrikeRunResponse:
@@ -476,6 +483,7 @@ class Client:
                 "user_model": user_model.model_dump(mode="json") if user_model else None,
                 "strike": str(strike) if strike else None,
                 "group": str(group) if group else None,
+                "context": context.model_dump(mode="json") if context else None,
             },
         )
         return self.StrikeRunResponse(**response.json())
