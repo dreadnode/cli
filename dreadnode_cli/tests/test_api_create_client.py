@@ -26,7 +26,7 @@ def _create_test_config(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
     # Create test config
     config = UserConfig()
     server_config = ServerConfig(
-        url="https://crucible.dreadnode.io",
+        url="https://platform.dreadnode.io",
         email="test@example.com",
         username="test",
         api_key="test123",
@@ -53,7 +53,7 @@ def test_create_client_with_valid_token(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
     client = api.create_client()
 
-    assert client._base_url == "https://crucible.dreadnode.io"
+    assert client._base_url == "https://platform.dreadnode.io"
     assert client._client.cookies["access_token"] == token
     assert client._client.cookies["refresh_token"] == token
 

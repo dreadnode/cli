@@ -11,7 +11,7 @@ DEBUG = bool(os.getenv("DREADNODE_DEBUG")) or False
 # default platform domain
 PLATFORM_BASE_DOMAIN = "dreadnode.io"
 # default server URL
-PLATFORM_BASE_URL = os.getenv("DREADNODE_SERVER", f"https://crucible.{PLATFORM_BASE_DOMAIN}")
+PLATFORM_BASE_URL = os.getenv("DREADNODE_SERVER", f"https://platform.{PLATFORM_BASE_DOMAIN}")
 # default docker registry subdomain
 DOCKER_REGISTRY_SUBDOMAIN = "registry"
 # default docker registry local port

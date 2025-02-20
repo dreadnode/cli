@@ -55,7 +55,7 @@ class MockDockerClient:
             return MockDockerClient.containers.containers
 
 
-def _create_test_server_config(url: str = "https://crucible.dreadnode.io") -> ServerConfig:
+def _create_test_server_config(url: str = "https://platform.dreadnode.io") -> ServerConfig:
     return ServerConfig(
         url=url,
         email="test@example.com",
@@ -121,11 +121,11 @@ def test_get_registry() -> None:
     assert docker.get_registry(config) == "registry.dreadnode.io"
 
     # Test staging registry
-    config = _create_test_server_config("https://staging-crucible.dreadnode.io")
+    config = _create_test_server_config("https://staging-platform.dreadnode.io")
     assert docker.get_registry(config) == "staging-registry.dreadnode.io"
 
     # Test dev registry
-    config = _create_test_server_config("https://dev-crucible.dreadnode.io")
+    config = _create_test_server_config("https://dev-platform.dreadnode.io")
     assert docker.get_registry(config) == "dev-registry.dreadnode.io"
 
     # Test localhost registry
@@ -149,13 +149,13 @@ def test_get_local_registry_port_with_running_registry_container() -> None:
 
 def test_get_registry_without_schema() -> None:
     # Test without schema
-    config = _create_test_server_config("crucible.dreadnode.io")
+    config = _create_test_server_config("platform.dreadnode.io")
     assert docker.get_registry(config) == "registry.dreadnode.io"
 
-    config = _create_test_server_config("staging-crucible.dreadnode.io")
+    config = _create_test_server_config("staging-platform.dreadnode.io")
     assert docker.get_registry(config) == "staging-registry.dreadnode.io"
 
-    config = _create_test_server_config("dev-crucible.dreadnode.io")
+    config = _create_test_server_config("dev-platform.dreadnode.io")
     assert docker.get_registry(config) == "dev-registry.dreadnode.io"
 
     config = _create_test_server_config("localhost:8000")
@@ -164,15 +164,15 @@ def test_get_registry_without_schema() -> None:
 
 def test_get_registry_custom_platform_base_domain() -> None:
     # Test custom platform base domain
-    config = _create_test_server_config("crucible.example.com")
+    config = _create_test_server_config("platform.example.com")
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr("dreadnode_cli.agent.docker.PLATFORM_BASE_DOMAIN", "example.com")
         assert docker.get_registry(config) == "registry.example.com"
 
-        config = _create_test_server_config("staging-crucible.example.com")
+        config = _create_test_server_config("staging-platform.example.com")
         assert docker.get_registry(config) == "staging-registry.example.com"
 
-        config = _create_test_server_config("dev-crucible.example.com")
+        config = _create_test_server_config("dev-platform.example.com")
         assert docker.get_registry(config) == "dev-registry.example.com"
 
 
