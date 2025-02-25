@@ -11,14 +11,14 @@ from dreadnode_cli.config import ServerConfig, UserConfig
 def test_server_config() -> None:
     # Test valid server config
     config = ServerConfig(
-        url="https://crucible.dreadnode.io",
+        url="https://platform.dreadnode.io",
         email="test@example.com",
         username="test",
         api_key="test123",
         access_token="token123",
         refresh_token="refresh123",
     )
-    assert config.url == "https://crucible.dreadnode.io"
+    assert config.url == "https://platform.dreadnode.io"
     assert config.email == "test@example.com"
     assert config.username == "test"
     assert config.api_key == "test123"
@@ -42,7 +42,7 @@ def test_user_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Test adding server config
     server_config = ServerConfig(
-        url="https://crucible.dreadnode.io",
+        url="https://platform.dreadnode.io",
         email="test@example.com",
         username="test",
         api_key="test123",
