@@ -492,9 +492,17 @@ class Client:
         response = self.request("GET", f"/api/strikes/runs/{run}")
         return self.StrikeRunResponse(**response.json())
 
-    def list_strike_runs(self, *, strike_id: UUID | str | None = None) -> list[StrikeRunSummaryResponse]:
+    def list_strike_runs(
+        self, *, strike: UUID | str | None = None, agent: UUID | str | None = None, group: UUID | str | None = None
+    ) -> list[StrikeRunSummaryResponse]:
         response = self.request(
-            "GET", "/api/strikes/runs", query_params={"strike_id": str(strike_id)} if strike_id else None
+            "GET",
+            "/api/strikes/runs",
+            query_params={
+                **({"strike": str(strike)} if strike else {}),
+                **({"agent": str(agent)} if agent else {}),
+                **({"group": str(group)} if group else {}),
+            },
         )
         return [self.StrikeRunSummaryResponse(**run) for run in response.json()]
 

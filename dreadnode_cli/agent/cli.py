@@ -517,6 +517,34 @@ def latest(
         print(format_run(run, verbose=verbose, include_logs=logs, server_url=server_config.url))
 
 
+@cli.command(help="Export all run information for the active agent")
+@pretty_cli
+def export(
+    directory: t.Annotated[
+        pathlib.Path,
+        typer.Option("--dir", "-d", help="The export directory", file_okay=False, resolve_path=True),
+    ] = pathlib.Path("export"),
+    strike: t.Annotated[str | None, typer.Option("--strike", "-s", help="Export runs for a specific strike")] = None,
+    group: t.Annotated[str | None, typer.Option("--group", "-g", help="Export runs from a specific group")] = None,
+) -> None:
+    agent_config = AgentConfig.read()
+    ensure_profile(agent_config)
+
+    client = api.create_client()
+    run_summaries = client.list_strike_runs(
+        strike=strike or agent_config.strike, group=group, agent=agent_config.active_link.id
+    )
+
+    print(f":package: Exporting {len(run_summaries)} runs to [b]{directory}[/] ...")
+
+    directory.mkdir(exist_ok=True)
+    for summary in run_summaries:
+        print(f" |- {summary.key} ({summary.id}) ...")
+        run = client.get_strike_run(summary.id)
+        with (directory / f"{run.key}_{run.id}.json").open("w") as f:
+            f.write(run.model_dump_json())
+
+
 @cli.command(help="Show the status of the active agent")
 @pretty_cli
 def show(
