@@ -124,7 +124,13 @@ def test_get_registry() -> None:
     config = _create_test_server_config("https://staging-platform.dreadnode.io")
     assert docker.get_registry(config) == "staging-registry.dreadnode.io"
 
+    config = _create_test_server_config("https://staging-platform.dreadnode.io")
+    assert docker.get_registry(config) == "staging-registry.dreadnode.io"
+
     # Test dev registry
+    config = _create_test_server_config("https://dev-platform.dreadnode.io")
+    assert docker.get_registry(config) == "dev-registry.dreadnode.io"
+
     config = _create_test_server_config("https://dev-platform.dreadnode.io")
     assert docker.get_registry(config) == "dev-registry.dreadnode.io"
 

@@ -28,6 +28,19 @@ class UserConfig(BaseModel):
         if self.active not in self.servers:
             self.active = next(iter(self.servers)) if self.servers else None
 
+    def _update_urls(self) -> bool:
+        updated = False
+        for search, replace in {
+            "//staging-crucible.dreadnode.io": "//staging-platform.dreadnode.io",
+            "//dev-crucible.dreadnode.io": "//dev-platform.dreadnode.io",
+            "//crucible.dreadnode.io": "//platform.dreadnode.io",
+        }.items():
+            for server in self.servers.values():
+                if search in server.url:
+                    server.url = server.url.replace(search, replace)
+                    updated = True
+        return updated
+
     @classmethod
     def read(cls) -> "UserConfig":
         """Read the user configuration from the file system or return an empty instance."""
@@ -36,7 +49,12 @@ class UserConfig(BaseModel):
             return cls()
 
         with USER_CONFIG_PATH.open("r") as f:
-            return cls.model_validate(YAML().load(f))
+            self = cls.model_validate(YAML().load(f))
+
+        if self._update_urls():
+            self.write()
+
+        return self
 
     def write(self) -> None:
         """Write the user configuration to the file system."""

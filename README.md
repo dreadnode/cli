@@ -103,7 +103,7 @@ dreadnode login
 Authenticate to a specific server:
 
 ```bash
-dreadnode login --server https://platform.dreadnode.io
+dreadnode login --server https://local-platform.dreadnode.io
 ```
 
 Manage server profiles with:
